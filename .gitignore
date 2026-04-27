@@ -1,0 +1,9 @@
+node_modules/
+.env
+dist/
+.DS_Store
+.wwebjs_auth/
+repopack-output.xml
+repomix-output.xml
+config/google-credentials.json
+/src/generated/prisma

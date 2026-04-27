@@ -1,0 +1,50 @@
+// Diz ao Prisma para gerar o código em JavaScript/TypeScript
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Diz ao Prisma que vamos usar PostgreSQL e onde está a senha (.env)
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Tabela de Usuários (Alunos/Leads)
+model User {
+  id               String        @id @default(uuid()) // Cria um ID único automático (ex: a1b2c3d4...)
+  phoneNumber      String        @unique              // O telefone não pode se repetir
+  name             String?                            // O "?" significa que não é obrigatório (opcional)
+  age              Int?
+  goal             String?
+  currentProgramId String?
+  conversationState String?       @default("GREETING") // Estado atual da conversa
+  interactionCount Int           @default(0)          // Começa em zero interações
+  lastInteraction  DateTime      @default(now())      // Grava a data/hora atual automaticamente
+  createdAt        DateTime      @default(now())
+  cpf              String?                            // CPF do aluno (usado na integração Asaas)
+  email            String?                            // Email para receber faturas
+  birthDate        String?                            // Data de nascimento (ex: "25/02/2005")
+  address          String?                            // Endereço completo com CEP
+  paymentDay       Int?                               // Melhor dia de vencimento para faturas
+  enrollmentTarget String?                            // Para quem é a matrícula (ex: "É para mim ou outro adulto")
+  extraInfo        String?                            // Informações adicionais do formulário
+  lgpdConsent      Boolean       @default(false)      // Consentimento LGPD coletado via Respondi
+  asaasCustomerId  String?       @unique              // ID do cliente no Asaas (gerado pela API)
+  lastPaymentUrl   String?                            // URL real da última cobrança gerada (jamais usa histórico)
+  
+  // Ligação: Um usuário pode ter VÁRIAS mensagens na Tabela ChatHistory
+  messages         ChatHistory[]
+}
+
+// Tabela do Histórico de Conversas
+model ChatHistory {
+  id        String   @id @default(uuid())
+  userId    String   // ID do usuário dono da mensagem
+  role      String   // Quem falou? Pode ser 'user' (cliente) ou 'model' (Artemis)
+  content   String   // O texto da mensagem em si
+  createdAt DateTime @default(now()) // Hora exata em que a mensagem foi mandada
+
+  // Ligação de volta para a tabela User
+  // onDelete: Cascade -> Se a Dayana apagar o usuário, apaga as mensagens dele junto
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

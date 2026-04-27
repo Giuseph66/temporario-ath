@@ -1,0 +1,34 @@
+{
+  "programs": [
+    {
+      "id": "ingles_personalizado",
+      "name": "Inglês Personalizado 2026",
+      "price_value": 550,
+      "price_type": "monthly",
+      "installments": 6,
+      "duration_weeks": 24,
+      "verbatim_intro": "Vou te enviar o informativo que responde às principais dúvidas dos alunos sobre esse programa. No final, me diz se encaixa no que você está procurando, ok?",
+      "full_text": "*Inglês Personalizado 2026*\n\nNa Confluence Treinamento trabalhamos com inglês personalizado, de forma totalmente adaptada às suas necessidades e objetivos.\nO objetivo não é terminar o livro, e sim desenvolver habilidades para ter desenvoltura na fala e compreensão.\n\n*1️⃣ Aulas Individuais*\n\n*Total Flexibilidade:* As aulas individuais são perfeitas se você quer ter liberdade de ajustar seu horário conforme necessário. É só ajustar com o professor em tempo hábil e pronto. Não precisa pagar para repor aula.\n\n*Aprendizado Acelerado:* Com mais tempo de fala e atenção individual, essas sessões são projetadas para maximizar o aprendizado com menor investimento de tempo.\n\n*Valor:* 6x R$ 550/mês (mensalidade)\n20 aulas semestrais.\nOs valores são pelo semestre fechado, com carga horária total de 20 aulas. Elas podem ser distribuídas ao longo do semestre da forma que ficar melhor para você.\n\n*2️⃣ Aulas em Dupla:*\n\n*Economia:* nos estudos em dupla o valor mensal é reduzido. Nesta modalidade, qualquer reagendamento precisa ser acordado com antecedência entre todos os alunos da turma, por isso não é tão flexível quando a opção individual.\n\n*Valor:* 6x R$ 410/mês por pessoa.\n20 aulas semestrais\n\n*Sem Taxas Adicionais:* Na Confluence nós não cobramos:\n- taxa de matrícula\n- taxa de material\n- taxa de reposição\n- multa contratual"
+    },
+    {
+      "id": "ingles_techlab",
+      "name": "Tech Lab",
+      "price_value": 770,
+      "price_type": "monthly",
+      "installments": 6,
+      "duration_weeks": 24,
+      "verbatim_intro": "Vou te enviar o informativo que responde às principais dúvidas dos alunos sobre esse programa. No final, me diz se encaixa no que você está procurando, ok?",
+      "full_text": "*TechLab*\n\nNosso programa de Enriquecimento Curricular Bilíngue não é sobre aulas tradicionais.\nNa Confluence Treinamento seu filho desenvolve habilidades em mecatrônica, inteligência artificial, gestão de projetos e outras áreas da tecnologia utilizando o inglês como base para toda a comunicação com professor nativo dos Estados Unidos.\n\nEste programa é ideal para adolescentes que sentem necessidade de desenvolver suas habilidades para além do currículo escolar.\nNossos alunos são jovens curiosos com interesses variados, que buscam construir um portfólio sólido para futura aplicação para Universidades internacionais.\n\nTambém promovemos oportunidades de socialização com outros adolescentes com objetivos similares, fomentando o networking, que é a ferramenta mais poderosa para o sucesso no meio acadêmico e empresarial.\n\nOs pacotes disponíveis são de sessões individuais OU em dupla.\n\n*Individual:* 6x R$ 770/mês (mensalidade)\n*Dupla:* 6x R$ 460/mês por aluno (mediante disponibilidade)\n\n• Semestre com 20 encontros de 45 minutos cada (~1 por semana).\n\n*Não cobramos:*\n- taxa de matrícula\n- taxa de material\n- taxa de reposição de aulas\n- multa contratual"
+    },
+    {
+      "id": "terapia_psicanalise",
+      "name": "Terapia em Psicanálise Relacional Moderna",
+      "price_value": 315,
+      "price_type": "per_session",
+      "installments": 1,
+      "duration_weeks": 0,
+      "verbatim_intro": "Vou te enviar o informativo que responde às principais dúvidas dos alunos sobre esse programa. No final, me diz se encaixa no que você está procurando, ok?",
+      "full_text": "*Terapia em Psicanálise Relacional Moderna*\n\nAs sessões na Confluence são profundas, relacionais e didáticas.\nTrabalhamos com a Psicanálise Relacional Moderna, que entende que a transformação acontece no vínculo na qualidade da relação terapêutica, na presença, na escuta e na capacidade de olhar os padrões emocionais em tempo real.\n\nPor isso, não precisa \"preparar o que vai dizer\" em cada sessão. O que é importante pra você flui naturalmente em cada conversa.\n\nNossos atendimentos têm 1 hora e 15 minutos, mais longos que o padrão tradicional. Esse tempo adicional permite que cada tema seja desenvolvido até o seu ponto de integração, evitando encontros interrompidos no meio de processos importantes.\n\nO resultado mais comum relatado pelos clientes é a sensação de clareza, fechamento e avanço real a cada sessão e não apenas desabafo.\n\n*Investimento*\n\n🔹 Sessão avulsa: R$ 315\n\nou\n\n🔹 *Plano continuado progressivo:*\n- 4 encontros no primeiro mês;\n- 2 encontros nos meses seguintes.\n\n*Valor mensal:* R$ 1160 no primeiro mês e 580 nos meses seguintes.\n\nOutros formatos podem ser combinados de acordo com o momento e a necessidade do cliente.\n\nNossa missão é ajudar você a:\n• Entender suas emoções e pensamentos;\n• Melhorar seus relacionamentos em todas as áreas da vida;\n• Desenvolver linguagem para o que sente;\n• Fazer escolhas mais conscientes e alinhadas."
+    }
+  ]
+}
