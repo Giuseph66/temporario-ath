@@ -178,6 +178,9 @@ body{background:#0f0f0e}
 }
 
 /* Cores por sprint */
+.sn-0{background:#0d1a2e;color:#7eb8f7;border:2px solid #1a4d8f}
+.sf-0{background:#0d1a2e;color:#7eb8f7;border:1px solid #1a4d8f}
+
 .sn-1{background:#0d2418;color:#5ec88a;border:2px solid #1b6b4d}
 .sf-1{background:#0d2418;color:#5ec88a;border:1px solid #1b6b4d}
 
@@ -371,9 +374,100 @@ code{
 .hl-c3 .hl-num{color:#6ea8f5}
 .hl-c4 .hl-num{color:#b794f4}
 .hl-c5 .hl-num{color:#f87171}
+
+/* ── PROGRESS TRACKER BAR ── */
+.tracker-wrap{
+  position:sticky;top:0;z-index:200;
+  background:rgba(15,15,14,.97);backdrop-filter:blur(12px);
+  border-bottom:1px solid #1e1c18;padding:10px 40px;
+}
+.tracker-inner{
+  max-width:1120px;margin:0 auto;
+  display:flex;align-items:center;gap:14px;
+}
+.tracker-label{
+  font-family:'Geist Mono',monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:1px;color:#3a3630;white-space:nowrap;flex-shrink:0;
+}
+.tracker-rail{
+  flex:1;height:4px;background:#1e1c18;border-radius:2px;overflow:hidden;
+}
+.tracker-fill{
+  height:100%;
+  background:linear-gradient(90deg,#1b6b4d,#5ec88a);
+  border-radius:2px;transition:width .4s ease;width:0%;
+}
+.tracker-count{
+  font-family:'Geist Mono',monospace;font-size:11px;
+  color:#5ec88a;white-space:nowrap;flex-shrink:0;
+}
+.tracker-reset{
+  font-family:'Geist Mono',monospace;font-size:9px;text-transform:uppercase;
+  letter-spacing:.8px;color:#2a2823;background:none;
+  border:1px solid #1e1c18;border-radius:4px;padding:3px 8px;
+  cursor:pointer;transition:all .15s;flex-shrink:0;
+}
+.tracker-reset:hover{color:#f87171;border-color:#a83a2a;}
+
+/* ── STEP STATES ── */
+.step-n{cursor:pointer;user-select:none;transition:color .15s;border-radius:4px;}
+.step-n:hover{opacity:.6;}
+
+.step-item[data-status="done"]{border-color:#1b6b4d;background:#06100a;}
+.step-item[data-status="done"] .step-n{color:#5ec88a !important;font-size:15px;}
+.step-item[data-status="done"] .step-title{
+  color:#3a7a5a;text-decoration:line-through;text-decoration-color:#1b6b4d66;
+}
+.step-item[data-status="done"] .step-desc{opacity:.35;}
+.step-item[data-status="done"] .step-file{opacity:.25;}
+
+.step-item[data-status="running"]{border-color:#a86a1a;background:#0f0800;}
+.step-item[data-status="running"] .step-n{
+  color:#f6a84a !important;font-size:15px;
+  animation:pulse-amber 1.4s ease-in-out infinite;
+}
+.step-item[data-status="running"] .step-title{color:#f6a84a;}
+
+@keyframes pulse-amber{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* ── SPRINT PROGRESS DOTS ── */
+.sprint-progress{display:flex;align-items:center;gap:4px;margin-left:auto;flex-shrink:0;}
+.sprint-flag{margin-left:0 !important;}
+.sp-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:#1e1c18;border:1px solid #2a2823;
+  transition:background .2s,border-color .2s;flex-shrink:0;
+}
+.sp-dot.done{background:#5ec88a;border-color:#1b6b4d;}
+.sp-dot.running{background:#f6a84a;border-color:#a86a1a;animation:pulse-amber 1.4s ease-in-out infinite;}
+
+/* ── CHECKLIST INTERACTIVE ── */
+.ci{cursor:pointer;transition:background .12s;}
+.ci:hover{background:#1e1c18;}
+.ci-box{position:relative;transition:all .2s;}
+.ci[data-checked="true"] .ci-box{background:#5ec88a;border-color:#1b6b4d;}
+.ci[data-checked="true"] .ci-box::after{
+  content:'✓';position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  font-size:9px;font-weight:800;color:#061008;line-height:1;
+}
+.ci[data-checked="true"] .ci-text{
+  color:#3a7a5a;text-decoration:line-through;text-decoration-color:#1b6b4d55;
+}
 </style>
 </head>
 <body>
+
+<!-- STICKY PROGRESS TRACKER -->
+<div class="tracker-wrap">
+  <div class="tracker-inner">
+    <span class="tracker-label">Progresso SaaS</span>
+    <div class="tracker-rail"><div class="tracker-fill" id="tracker-fill"></div></div>
+    <span class="tracker-count" id="tracker-count">0/28 passos · 0%</span>
+    <button class="tracker-reset" id="tracker-reset">Reset</button>
+  </div>
+</div>
+
 <div class="page">
 
 <!-- COVER -->
@@ -389,7 +483,7 @@ code{
     <span class="tag tag-green">Multi-tenant SaaS</span>
     <span class="tag tag-green">Evolution API</span>
     <span class="tag tag-blue">Frontend React</span>
-    <span class="tag tag-amber">6 Sprints · ~40 passos</span>
+    <span class="tag tag-amber">7 Sprints · 51 passos</span>
     <span class="tag tag-red">Arquitetura reformulada</span>
   </div>
 </div>
@@ -404,7 +498,7 @@ code{
     <div class="hl-card hl-c1"><div class="hl-num">1</div><div class="hl-label">Cliente atual</div></div>
     <div class="hl-card hl-c2"><div class="hl-num">∞</div><div class="hl-label">Meta SaaS</div></div>
     <div class="hl-card hl-c3"><div class="hl-num">6</div><div class="hl-label">Sprints</div></div>
-    <div class="hl-card hl-c4"><div class="hl-num">40+</div><div class="hl-label">Passos totais</div></div>
+    <div class="hl-card hl-c4"><div class="hl-num">51</div><div class="hl-label">Passos totais</div></div>
     <div class="hl-card hl-c5"><div class="hl-num">2</div><div class="hl-label">Canais WhatsApp</div></div>
   </div>
 
@@ -682,6 +776,206 @@ code{
         <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:700;color:#b794f4">F</span>
         <span style="font-family:'Geist Mono',monospace;font-size:10px;color:#b794f4;text-transform:uppercase;letter-spacing:.5px">Onboarding</span>
         <span style="font-size:13px;color:#c9c4b6">✦ <strong style="color:#f1ecdc">Um segundo cliente se registra sozinho</strong>, escaneia QR Code e o bot dele já está funcionando. SaaS real.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sprint 0 — Estabilização -->
+  <div class="sprint-block">
+    <div class="sprint-header">
+      <div class="sprint-num sn-0">0</div>
+      <div class="sprint-info">
+        <h3>Estabilização — Correções, Segurança e Testes</h3>
+        <p>23 passos obrigatórios antes de qualquer SaaS. Sistema instável não escala.</p>
+      </div>
+      <div class="sprint-flag sf-0">Primeiro — base necessária</div>
+    </div>
+    <div class="sprint-body">
+      <div class="step-list">
+        <div class="step-item" data-status="done">
+          <div class="step-n">01</div>
+          <div>
+            <div class="step-title">Corrigir Prisma Singleton</div>
+            <div class="step-desc">Remover <code>new PrismaClient()</code> de <code>index.ts</code>, <code>AIService.ts</code> e <code>AsaasWebhookController.ts</code>. Importar singleton de <code>src/utils/prisma.ts</code> em todos.</div>
+          </div>
+          <div class="step-file">src/utils/prisma.ts</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">02</div>
+          <div>
+            <div class="step-title">Corrigir Ordem do Histórico de Conversa</div>
+            <div class="step-desc">Query do ChatHistory deve ordenar por <code>createdAt asc</code>. Ordem errada manda contexto invertido ao Gemini, quebrando coerência da conversa.</div>
+          </div>
+          <div class="step-file">src/services/BotService.ts</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">03</div>
+          <div>
+            <div class="step-title">Adicionar Graceful Shutdown</div>
+            <div class="step-desc">Handlers para <code>SIGTERM</code> e <code>SIGINT</code> em <code>index.ts</code>: fechar servidor Express, chamar <code>prisma.$disconnect()</code>. Sem isso, PM2 reinicia e deixa conexões abertas no banco.</div>
+          </div>
+          <div class="step-file">src/index.ts</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">04</div>
+          <div>
+            <div class="step-title">Criar Arquivo <code>.env.example</code></div>
+            <div class="step-desc">Documentar todas as variáveis de ambiente necessárias com valores fictícios. Sem isso qualquer dev (ou IA) configura o projeto errado.</div>
+          </div>
+          <div class="step-file">.env.example (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">05</div>
+          <div>
+            <div class="step-title">Atualizar README.md</div>
+            <div class="step-desc">README atual cita OpenAI e arquitetura desatualizada. Reescrever com stack real: Gemini, Prisma, PostgreSQL, Evolution API, Asaas, Google Calendar.</div>
+          </div>
+          <div class="step-file">README.md</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">06</div>
+          <div>
+            <div class="step-title">Validar Assinatura do Webhook Asaas</div>
+            <div class="step-desc">Endpoint <code>POST /webhook/asaas</code> aceita qualquer payload sem validação. Adicionar verificação do header <code>asaas-access-token</code> comparando com <code>ASAAS_WEBHOOK_TOKEN</code> do env. Rejeitar com 401 se inválido.</div>
+          </div>
+          <div class="step-file">src/controllers/AsaasWebhookController.ts</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">07</div>
+          <div>
+            <div class="step-title">Adicionar Idempotência ao Webhook Asaas</div>
+            <div class="step-desc">Asaas reenvia mesmo evento por retentativas. Criar tabela <code>ProcessedEvent</code> no schema: salvar <code>eventId</code> único. Ignorar silenciosamente se já processado. Executar após passo 06.</div>
+          </div>
+          <div class="step-file">prisma/schema.prisma · AsaasWebhookController.ts</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">08</div>
+          <div>
+            <div class="step-title">Mover Calendar ID para Variável de Ambiente</div>
+            <div class="step-desc">ID do calendário está hardcoded em <code>CalendarService.ts</code>. Mover para <code>GOOGLE_CALENDAR_ID</code> no env. Sem isso, qualquer cliente SaaS usaria o calendário da Confluence.</div>
+          </div>
+          <div class="step-file">src/services/CalendarService.ts</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">09</div>
+          <div>
+            <div class="step-title">Remover Logs com Dados Pessoais (LGPD)</div>
+            <div class="step-desc">Logs atualmente imprimem CPF, email, endereço, telefone completo. Mascarar ou remover. CPF → <code>***.***.***-**</code>. Telefone → últimos 4 dígitos. LGPD Arts. 6 e 46.</div>
+          </div>
+          <div class="step-file">src/services/AIService.ts · outros</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">10</div>
+          <div>
+            <div class="step-title">Configurar Framework de Testes (Vitest)</div>
+            <div class="step-desc">Instalar <code>vitest</code>, <code>@vitest/coverage-v8</code>. Criar <code>vitest.config.ts</code>. Adicionar scripts <code>test</code> e <code>test:coverage</code> no package.json. Pré-requisito para passos 11–15.</div>
+          </div>
+          <div class="step-file">vitest.config.ts · package.json</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">11</div>
+          <div>
+            <div class="step-title">Testes do phoneNormalizer</div>
+            <div class="step-desc">Função crítica: identificador único de cada usuário. Testar: número com/sem DDI, com/sem 9 extra, número inválido, formato internacional. Após passo 10.</div>
+          </div>
+          <div class="step-file">src/utils/phoneNormalizer.test.ts (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">12</div>
+          <div>
+            <div class="step-title">Testes do StateResolver (FSM)</div>
+            <div class="step-desc">Cérebro da conversa. Testar transições entre os 6 estados FSM e detecção dos 4 gatilhos de transferência (DELETION, MENTAL_HEALTH, HOSTILE, SOFT). Após passo 10.</div>
+          </div>
+          <div class="step-file">src/flow/StateResolver.test.ts (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">13</div>
+          <div>
+            <div class="step-title">Testes do PromptBuilder</div>
+            <div class="step-desc">Verificar que cada estado FSM gera exatamente os blocos XML corretos. GREETING não deve incluir preços. CLOSING deve incluir bloco de pagamento. Após passo 10.</div>
+          </div>
+          <div class="step-file">src/services/PromptBuilder.test.ts (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">14</div>
+          <div>
+            <div class="step-title">Testes de Cálculo de Pagamento Asaas</div>
+            <div class="step-desc">Testar lógica de desconto: mensal (sem desconto), semestral (5% desc), anual (7% desc). Verificar arredondamento para 2 casas decimais. Erro aqui = cobrança errada ao aluno. Após passo 10.</div>
+          </div>
+          <div class="step-file">src/services/AIService.test.ts (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">15</div>
+          <div>
+            <div class="step-title">Testes do RespondiController</div>
+            <div class="step-desc">Testar upsert de alunos vindos do webhook Respondi. Casos: novo aluno, aluno existente atualizado, payload inválido. Lógica errada duplica ou perde dados. Após passo 10.</div>
+          </div>
+          <div class="step-file">src/controllers/RespondiController.test.ts (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">16</div>
+          <div>
+            <div class="step-title">Resposta Determinística para Mídia Não Suportada</div>
+            <div class="step-desc">Quando usuário envia imagem/áudio/vídeo/PDF, bot ignora silenciosamente. Adicionar resposta fixa: "Só consigo ler texto. Pode me escrever o que precisa?" antes de processar com IA.</div>
+          </div>
+          <div class="step-file">src/controllers/WebhookController.ts</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">17</div>
+          <div>
+            <div class="step-title">Padronizar Protocolo Teen (14–17 anos)</div>
+            <div class="step-desc">Faixa etária do Tech Lab inconsistente: código diz 14-16, persona diz 14-17. Definir valor único em env <code>TEEN_MAX_AGE=17</code> e referenciar em todos os lugares. Eliminar magic numbers.</div>
+          </div>
+          <div class="step-file">src/config/ · src/flow/StateResolver.ts</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">18</div>
+          <div>
+            <div class="step-title">Salvar <code>currentProgramId</code> de Forma Determinística</div>
+            <div class="step-desc">Campo <code>currentProgramId</code> vazio faz PromptBuilder deduzir programa pela idade — frágil, pode mudar entre mensagens. Salvar no banco assim que programa for identificado e nunca sobrescrever sem motivo explícito.</div>
+          </div>
+          <div class="step-file">src/services/BotService.ts</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">19</div>
+          <div>
+            <div class="step-title">Adicionar Status de Matrícula no Banco</div>
+            <div class="step-desc">Após pagamento confirmado pelo Asaas, banco não registra que aluno está matriculado. Adicionar campo <code>enrollmentStatus</code> (LEAD | PAYMENT_PENDING | ENROLLED | CANCELLED) e atualizar no webhook de pagamento.</div>
+          </div>
+          <div class="step-file">prisma/schema.prisma · AsaasWebhookController.ts</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">20</div>
+          <div>
+            <div class="step-title">Remover Código Morto</div>
+            <div class="step-desc">Remover variáveis declaradas sem uso, importações órfãs, instâncias de serviços nunca chamadas. Poluem o código e confundem manutenção futura.</div>
+          </div>
+          <div class="step-file">src/ (varredura geral)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">21</div>
+          <div>
+            <div class="step-title">Melhorar Tipagem TypeScript — Remover <code>any</code></div>
+            <div class="step-desc">Substituir <code>any</code> por tipos concretos ou <code>unknown</code> com narrowing. <code>any</code> desativa verificação de tipos e esconde bugs que só aparecem em produção.</div>
+          </div>
+          <div class="step-file">src/ (varredura geral)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">22</div>
+          <div>
+            <div class="step-title">Criar Migrations Prisma Versionadas</div>
+            <div class="step-desc">Atualmente só existe schema.prisma sem migrations. Executar <code>prisma migrate dev --name baseline</code>. Sem histórico de migrations, atualizar banco em produção é arriscado. Após passos 07 e 19.</div>
+          </div>
+          <div class="step-file">prisma/migrations/ (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">23</div>
+          <div>
+            <div class="step-title">Adicionar Enum de Estado FSM no Schema Prisma</div>
+            <div class="step-desc">Campo <code>conversationState</code> é <code>String?</code> — aceita qualquer valor sem validação. Criar enum <code>ConversationState</code> com os 6 estados válidos. Strings inválidas como <code>"GRETING"</code> passariam silenciosamente. Após passo 22.</div>
+          </div>
+          <div class="step-file">prisma/schema.prisma</div>
+        </div>
       </div>
     </div>
   </div>
@@ -1208,7 +1502,7 @@ code{
 
   <!-- Flow final -->
   <div class="flow">
-    <div class="flow-node fn-warm">Sprints 1–5<br><small style="font-weight:400;font-size:10px">Estabilização atual</small></div>
+    <div class="flow-node fn-warm">Sprint 0<br><small style="font-weight:400;font-size:10px">Estabilização (23)</small></div>
     <div class="flow-arrow">→</div>
     <div class="flow-node fn-warm">Sprint A<br><small style="font-weight:400;font-size:10px">DB multi-tenant</small></div>
     <div class="flow-arrow">→</div>
@@ -1229,7 +1523,7 @@ code{
   <div class="section-label">07 · Aceite</div>
   <h2>Critérios para<br><em>MVP SaaS pronto</em></h2>
   <div class="checklist">
-    <div class="ci"><div class="ci-box"></div><div class="ci-text">Todos os 23 passos do plano original concluídos</div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Sprint 0 completo — todos os 23 passos de estabilização concluídos</div></div>
     <div class="ci"><div class="ci-box"></div><div class="ci-text">Modelo <code>Tenant</code> criado com migration aplicada</div></div>
     <div class="ci"><div class="ci-box"></div><div class="ci-text">Todos os dados filtrados por <code>tenantId</code> — zero vazamento entre clientes</div></div>
     <div class="ci"><div class="ci-box"></div><div class="ci-text">Evolution API integrada — <code>EvolutionService</code> funcional</div></div>
@@ -1253,5 +1547,121 @@ code{
   <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#3a3630">Artemis Bot · Plano SaaS · Maio 2026</span>
 </footer>
 
+<script>
+(function(){
+  var KEY='artemis_saas_v1';
+  var STATES=['pending','running','done'];
+  var origIds={};
+
+  function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}}
+  function save(d){try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+
+  function nextState(s){var i=STATES.indexOf(s);return STATES[(i+1)%STATES.length];}
+
+  function applyStep(item,stepN,id,status){
+    item.dataset.status=status||'pending';
+    if(status==='done') stepN.textContent='✓';
+    else if(status==='running') stepN.textContent='▶';
+    else stepN.textContent=origIds[id]||id;
+  }
+
+  function updateTracker(){
+    var items=document.querySelectorAll('.step-item[data-step-id]');
+    var total=items.length,done=0;
+    items.forEach(function(el){if(el.dataset.status==='done')done++;});
+    var pct=total>0?Math.round(done/total*100):0;
+    var fill=document.getElementById('tracker-fill');
+    var count=document.getElementById('tracker-count');
+    if(fill)fill.style.width=pct+'%';
+    if(count)count.textContent=done+'/'+total+' concluídos · '+pct+'%';
+  }
+
+  function updateDots(){
+    document.querySelectorAll('.sprint-block').forEach(function(block){
+      var dots=block.querySelectorAll('.sp-dot');
+      var steps=block.querySelectorAll('.step-item[data-step-id]');
+      steps.forEach(function(step,i){
+        if(!dots[i])return;
+        var s=step.dataset.status||'pending';
+        dots[i].className='sp-dot'+(s==='done'?' done':s==='running'?' running':'');
+      });
+    });
+  }
+
+  function init(){
+    var d=load();
+
+    /* ── Step items ── */
+    document.querySelectorAll('.step-item').forEach(function(item){
+      var stepN=item.querySelector('.step-n');
+      if(!stepN)return;
+      var id=stepN.textContent.trim();
+      if(!id)return;
+      origIds[id]=id;
+      item.dataset.stepId=id;
+      var htmlDefault=item.getAttribute('data-status')||'pending';
+      applyStep(item,stepN,id,d[id]||htmlDefault);
+      stepN.addEventListener('click',function(e){
+        e.stopPropagation();
+        var next=nextState(item.dataset.status||'pending');
+        d[id]=next;
+        applyStep(item,stepN,id,next);
+        save(d);
+        updateTracker();
+        updateDots();
+      });
+    });
+
+    /* ── Sprint dots injection ── */
+    document.querySelectorAll('.sprint-block').forEach(function(block){
+      var header=block.querySelector('.sprint-header');
+      var flag=block.querySelector('.sprint-flag');
+      if(!header)return;
+      var stepEls=block.querySelectorAll('.step-item');
+      var dotsDiv=document.createElement('div');
+      dotsDiv.className='sprint-progress';
+      stepEls.forEach(function(){
+        var dot=document.createElement('div');
+        dot.className='sp-dot';
+        dotsDiv.appendChild(dot);
+      });
+      if(flag)header.insertBefore(dotsDiv,flag);
+      else header.appendChild(dotsDiv);
+    });
+
+    /* ── Checklist section 07 ── */
+    document.querySelectorAll('.ci').forEach(function(ci,i){
+      var key='check_'+i;
+      if(d[key])ci.dataset.checked='true';
+      ci.addEventListener('click',function(){
+        if(ci.dataset.checked==='true'){
+          delete ci.dataset.checked;
+          d[key]=false;
+        }else{
+          ci.dataset.checked='true';
+          d[key]=true;
+        }
+        save(d);
+      });
+    });
+
+    /* ── Reset button ── */
+    var resetBtn=document.getElementById('tracker-reset');
+    if(resetBtn){
+      resetBtn.addEventListener('click',function(){
+        if(!confirm('Resetar todo o progresso?'))return;
+        localStorage.removeItem(KEY);
+        location.reload();
+      });
+    }
+
+    updateTracker();
+    updateDots();
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
+  else init();
+})();
+</script>
 </body>
 </html>
