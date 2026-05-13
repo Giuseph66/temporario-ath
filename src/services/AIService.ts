@@ -3,11 +3,10 @@ import dotenv from "dotenv";
 import { calendarService } from "./CalendarService";
 import { asaasService } from "./AsaasService";
 import { WhatsAppService } from "./WhatsAppService";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from '../utils/prisma';
 
 dotenv.config();
 
-const prisma = new PrismaClient();
 const whatsapp = new WhatsAppService();
 
 // ── Error classification for intelligent retry logic ─────────────────────────

@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Artemis — Plano SaaS Completo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink-1:#14130f;--ink-2:#2a2823;--ink-3:#55524a;--ink-4:#8a8579;--ink-5:#b8b3a6;
+  --paper:#faf9f5;--paper-2:#f3f1ea;--paper-3:#e9e6db;
+  --line:#e3dfd3;--line-2:#d4cfbf;
+  --accent:#1b6b4d;--accent-soft:#e6f0eb;--accent-ink:#0d4a36;
+  --amber:#a86a1a;--amber-soft:#f6ebd6;
+  --danger:#a83a2a;--danger-soft:#f5e1dc;
+  --blue:#1a4d8f;--blue-soft:#e0eaf8;
+  --purple:#5b3b9e;--purple-soft:#ede8f8;
+  --r:10px;--r-lg:14px;--r-xl:18px;
+}
+html{background:#0f0f0e;font-family:'Geist',-apple-system,system-ui,sans-serif;color:var(--ink-1)}
+body{background:#0f0f0e}
+
+/* ── PAGE WRAPPER ── */
+.page{max-width:1120px;margin:0 auto;padding:0 40px 80px}
+
+/* ── COVER ── */
+.cover{
+  padding:80px 0 64px;
+  border-bottom:1px solid #1e1c18;
+  margin-bottom:64px;
+}
+.cover-eyebrow{
+  font-family:'Geist Mono',monospace;font-size:11px;text-transform:uppercase;
+  letter-spacing:1.2px;color:#5ec88a;margin-bottom:18px;
+}
+.cover h1{
+  font-family:'Fraunces',serif;font-weight:400;font-size:64px;letter-spacing:-2px;
+  line-height:.95;color:#f1ecdc;margin-bottom:20px;
+}
+.cover h1 em{font-style:italic;color:#8a8579}
+.cover-lead{font-size:18px;color:#8a8579;line-height:1.65;max-width:640px;margin-bottom:36px}
+.cover-tags{display:flex;gap:10px;flex-wrap:wrap}
+.tag{
+  padding:5px 13px;border-radius:999px;font-size:12px;font-weight:500;
+  border:1px solid;display:inline-flex;align-items:center;gap:6px;
+}
+.tag-green{background:#0d2418;color:#5ec88a;border-color:#1b6b4d}
+.tag-amber{background:#2e1800;color:#f6a84a;border-color:#a86a1a}
+.tag-blue{background:#0c1f3a;color:#6ea8f5;border-color:#1a4d8f}
+.tag-red{background:#2e0f0a;color:#f87171;border-color:#a83a2a}
+
+/* ── SECTION ── */
+.section{margin-bottom:72px}
+.section-label{
+  font-family:'Geist Mono',monospace;font-size:11px;text-transform:uppercase;
+  letter-spacing:1.2px;color:#5ec88a;margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.section-label::after{content:'';flex:1;height:1px;background:#1e1c18}
+.section h2{
+  font-family:'Fraunces',serif;font-weight:400;font-size:38px;letter-spacing:-1px;
+  color:#f1ecdc;margin-bottom:10px;line-height:1.05;
+}
+.section-sub{font-size:15px;color:#8a8579;line-height:1.6;max-width:700px;margin-bottom:32px}
+
+/* ── OPINION BOX ── */
+.opinion{
+  background:#1a1917;border:1px solid #2a2823;border-left:3px solid #5ec88a;
+  border-radius:var(--r-lg);padding:24px 28px;margin-bottom:32px;
+}
+.opinion-head{
+  font-family:'Geist Mono',monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:1px;color:#5ec88a;margin-bottom:10px;
+}
+.opinion p{font-size:14px;color:#c9c4b6;line-height:1.7}
+.opinion p+p{margin-top:10px}
+.opinion strong{color:#f1ecdc;font-weight:600}
+
+/* ── CARDS GRID ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid-auto{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+
+.card{
+  background:#1a1917;border:1px solid #2a2823;border-radius:var(--r-xl);
+  padding:24px;transition:border-color .15s;
+}
+.card:hover{border-color:#3a3630}
+
+.card-icon{
+  width:40px;height:40px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;margin-bottom:16px;border:1px solid;
+}
+.icon-green{background:#0d2418;border-color:#1b6b4d}
+.icon-amber{background:#2e1800;border-color:#a86a1a}
+.icon-blue{background:#0c1f3a;border-color:#1a4d8f}
+.icon-red{background:#2e0f0a;border-color:#a83a2a}
+.icon-purple{background:#1e1030;border-color:#5b3b9e}
+
+.card h3{font-size:16px;font-weight:600;color:#f1ecdc;margin-bottom:8px;letter-spacing:-.2px}
+.card p{font-size:13px;color:#8a8579;line-height:1.65}
+.card-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:'Geist Mono',monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.6px;padding:3px 8px;border-radius:4px;margin-bottom:12px;
+}
+.b-critical{background:#2e0f0a;color:#f87171;border:1px solid #a83a2a}
+.b-high{background:#2e1800;color:#f6a84a;border:1px solid #a86a1a}
+.b-med{background:#0c1f3a;color:#6ea8f5;border:1px solid #1a4d8f}
+.b-new{background:#1e1030;color:#b794f4;border:1px solid #5b3b9e}
+.b-ok{background:#0d2418;color:#5ec88a;border:1px solid #1b6b4d}
+
+/* ── COMPARISON TABLE ── */
+.compare{
+  background:#1a1917;border:1px solid #2a2823;border-radius:var(--r-xl);
+  overflow:hidden;margin-bottom:24px;
+}
+.compare-head{
+  display:grid;grid-template-columns:2fr 1fr 1fr;
+  padding:14px 20px;background:#111110;
+  font-family:'Geist Mono',monospace;font-size:11px;text-transform:uppercase;
+  letter-spacing:.8px;color:#55524a;border-bottom:1px solid #2a2823;
+}
+.compare-row{
+  display:grid;grid-template-columns:2fr 1fr 1fr;
+  padding:13px 20px;border-bottom:1px solid #1a1917;
+  align-items:center;transition:background .1s;
+}
+.compare-row:hover{background:#1e1c18}
+.compare-row:last-child{border-bottom:none}
+.cr-label{font-size:13.5px;color:#c9c4b6}
+.cr-label small{font-size:11.5px;color:#55524a;display:block;margin-top:2px}
+.cr-yes{color:#5ec88a;font-size:13px;font-weight:500}
+.cr-no{color:#a83a2a;font-size:13px}
+.cr-partial{color:#a86a1a;font-size:13px}
+
+/* ── SPRINT BLOCK ── */
+.sprint-block{
+  background:#1a1917;border:1px solid #2a2823;border-radius:var(--r-xl);
+  overflow:hidden;margin-bottom:20px;
+}
+.sprint-header{
+  padding:20px 24px;border-bottom:1px solid #1e1c18;
+  display:flex;align-items:center;gap:16px;
+}
+.sprint-num{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Geist Mono',monospace;font-size:13px;font-weight:700;
+  flex-shrink:0;
+}
+.sprint-info h3{font-size:17px;font-weight:600;color:#f1ecdc;margin-bottom:3px}
+.sprint-info p{font-size:13px;color:#55524a}
+.sprint-flag{margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:.6px;padding:4px 10px;border-radius:4px;}
+
+.sprint-body{padding:16px 24px 20px}
+.step-list{display:flex;flex-direction:column;gap:10px}
+.step-item{
+  display:grid;grid-template-columns:28px 1fr auto;
+  gap:12px;align-items:start;
+  padding:12px 14px;background:#111110;border-radius:8px;
+  border:1px solid #1e1c18;
+}
+.step-n{
+  font-family:'Geist Mono',monospace;font-size:11px;font-weight:700;
+  color:#55524a;text-align:center;padding-top:2px;
+}
+.step-title{font-size:13.5px;color:#d4cfc0;font-weight:500;margin-bottom:3px}
+.step-desc{font-size:12px;color:#55524a;line-height:1.55}
+.step-file{
+  font-family:'Geist Mono',monospace;font-size:10.5px;color:#3a3630;
+  white-space:nowrap;padding-top:2px;
+}
+
+/* Cores por sprint */
+.sn-1{background:#0d2418;color:#5ec88a;border:2px solid #1b6b4d}
+.sf-1{background:#0d2418;color:#5ec88a;border:1px solid #1b6b4d}
+
+.sn-2{background:#2e0f0a;color:#f87171;border:2px solid #a83a2a}
+.sf-2{background:#2e0f0a;color:#f87171;border:1px solid #a83a2a}
+
+.sn-3{background:#0c1f3a;color:#6ea8f5;border:2px solid #1a4d8f}
+.sf-3{background:#0c1f3a;color:#6ea8f5;border:1px solid #1a4d8f}
+
+.sn-4{background:#2e1800;color:#f6a84a;border:2px solid #a86a1a}
+.sf-4{background:#2e1800;color:#f6a84a;border:1px solid #a86a1a}
+
+.sn-5{background:#1e1030;color:#b794f4;border:2px solid #5b3b9e}
+.sf-5{background:#1e1030;color:#b794f4;border:1px solid #5b3b9e}
+
+.sn-6{background:#111110;color:#f1ecdc;border:2px solid #3a3630}
+.sf-6{background:#111110;color:#f1ecdc;border:1px solid #3a3630}
+
+/* ── ARCHITECTURE DIAGRAM ── */
+.arch{
+  background:#1a1917;border:1px solid #2a2823;border-radius:var(--r-xl);
+  padding:32px;margin-bottom:24px;
+}
+.arch-layers{display:flex;flex-direction:column;gap:12px}
+.arch-layer{
+  border-radius:10px;padding:14px 20px;
+  display:flex;align-items:center;gap:16px;
+  border:1px solid;
+}
+.layer-label{
+  font-family:'Geist Mono',monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:1px;min-width:120px;flex-shrink:0;
+}
+.layer-items{display:flex;gap:8px;flex-wrap:wrap}
+.layer-chip{
+  padding:5px 12px;border-radius:6px;font-size:12px;font-weight:500;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  color:#c9c4b6;
+}
+.layer-chip.active{background:rgba(255,255,255,.08);color:#f1ecdc}
+
+.al-front{background:#0a1c14;border-color:#1b6b4d}
+.al-front .layer-label{color:#5ec88a}
+.al-api{background:#12100e;border-color:#2a2823}
+.al-api .layer-label{color:#8a8579}
+.al-core{background:#0a0f1e;border-color:#1a4d8f}
+.al-core .layer-label{color:#6ea8f5}
+.al-data{background:#1a0e00;border-color:#a86a1a}
+.al-data .layer-label{color:#f6a84a}
+.al-ext{background:#150a1a;border-color:#5b3b9e}
+.al-ext .layer-label{color:#b794f4}
+
+.arch-arrow{
+  text-align:center;font-size:18px;color:#2a2823;letter-spacing:2px;
+  margin:0 auto;
+}
+
+/* ── TENANT SCHEMA ── */
+.schema{
+  background:#1a1917;border:1px solid #2a2823;border-radius:var(--r-xl);
+  overflow:hidden;margin-bottom:16px;
+}
+.schema-title{
+  padding:14px 20px;background:#111110;border-bottom:1px solid #1e1c18;
+  font-family:'Geist Mono',monospace;font-size:12px;color:#5ec88a;
+  font-weight:700;display:flex;align-items:center;gap:8px;
+}
+.schema-body{padding:16px 20px}
+.schema-field{
+  display:grid;grid-template-columns:160px 100px 1fr;
+  gap:16px;padding:8px 0;border-bottom:1px solid #1a1917;
+  align-items:baseline;
+}
+.schema-field:last-child{border-bottom:none}
+.sf-name{font-family:'Geist Mono',monospace;font-size:12px;color:#f1ecdc}
+.sf-type{font-family:'Geist Mono',monospace;font-size:11px;color:#1b6b4d}
+.sf-desc{font-size:12px;color:#55524a;line-height:1.5}
+
+/* ── FLOW DIAGRAM ── */
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:24px;
+  background:#1a1917;border:1px solid #2a2823;border-radius:var(--r-xl);margin-bottom:16px}
+.flow-node{
+  padding:10px 18px;border-radius:8px;font-size:12px;font-weight:600;
+  border:1px solid;text-align:center;
+}
+.flow-arrow{color:#2a2823;font-size:18px;flex-shrink:0}
+.fn-warm{background:#0a1c14;color:#5ec88a;border-color:#1b6b4d}
+.fn-blue{background:#0a0f1e;color:#6ea8f5;border-color:#1a4d8f}
+.fn-amber{background:#1a0e00;color:#f6a84a;border-color:#a86a1a}
+.fn-purple{background:#150a1a;color:#b794f4;border-color:#5b3b9e}
+.fn-red{background:#200a08;color:#f87171;border-color:#a83a2a}
+
+/* ── EVOLUTION API BOX ── */
+.evo-box{
+  background:linear-gradient(135deg,#0a1c14 0%,#050d0a 100%);
+  border:1px solid #1b6b4d;border-radius:var(--r-xl);
+  padding:32px;margin-bottom:24px;
+}
+.evo-title{
+  font-family:'Fraunces',serif;font-size:28px;color:#5ec88a;
+  font-weight:400;margin-bottom:8px;letter-spacing:-.5px;
+}
+.evo-sub{font-size:14px;color:#3a7a5a;margin-bottom:24px;line-height:1.6}
+.evo-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.evo-item{
+  background:rgba(27,107,77,.08);border:1px solid rgba(27,107,77,.25);
+  border-radius:10px;padding:16px;
+}
+.evo-item h4{font-size:14px;font-weight:600;color:#5ec88a;margin-bottom:6px}
+.evo-item p{font-size:12.5px;color:#6ab58e;line-height:1.6}
+.evo-warning{
+  margin-top:20px;padding:14px 18px;background:rgba(168,58,42,.1);
+  border:1px solid rgba(168,58,42,.3);border-radius:8px;
+  font-size:12.5px;color:#e87878;line-height:1.6;
+}
+.evo-warning strong{color:#f87171}
+
+/* ── SCREEN PLAN ── */
+.screen-card{
+  background:#1a1917;border:1px solid #2a2823;border-radius:var(--r-xl);
+  overflow:hidden;
+}
+.screen-preview{
+  background:var(--paper-2);height:200px;
+  display:flex;align-items:center;justify-content:center;
+  border-bottom:1px solid #2a2823;position:relative;overflow:hidden;
+}
+.screen-mini{
+  background:var(--paper);border:1px solid var(--line);
+  border-radius:8px;padding:14px;width:260px;
+  font-family:'Geist',sans-serif;
+}
+.screen-mini-bar{
+  height:8px;background:var(--paper-3);border-radius:4px;margin-bottom:10px;
+}
+.screen-mini-row{display:flex;gap:6px;margin-bottom:6px}
+.screen-mini-block{height:28px;flex:1;background:var(--paper-3);border-radius:4px}
+.screen-mini-block.accent{background:var(--accent-soft);border:1px solid #c9d8d0}
+.screen-mini-block.sm{flex:0 0 56px}
+.screen-mini-block.hero{height:48px;margin-bottom:8px;background:var(--paper-3);border-radius:6px}
+.screen-mini-block.list{height:18px;background:var(--paper-3);border-radius:3px;margin-bottom:4px}
+.screen-mini-block.list.active{background:var(--accent-soft)}
+.screen-mini-side{width:80px;flex-shrink:0}
+.screen-mini-sideitem{height:20px;background:var(--paper-3);border-radius:3px;margin-bottom:5px}
+.screen-mini-sideitem.active{background:var(--accent-soft)}
+
+.screen-label{padding:16px 20px}
+.screen-label h4{font-size:15px;font-weight:600;color:#f1ecdc;margin-bottom:4px}
+.screen-label p{font-size:12.5px;color:#55524a;line-height:1.55}
+.screen-tags{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.screen-tag{
+  font-family:'Geist Mono',monospace;font-size:10px;padding:2px 7px;
+  border-radius:3px;background:#111110;color:#55524a;border:1px solid #1e1c18;
+}
+
+/* ── CHECKLIST FINAL ── */
+.checklist{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ci{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:10px 14px;background:#1a1917;border-radius:8px;border:1px solid #1e1c18;
+}
+.ci-box{
+  width:16px;height:16px;border-radius:3px;border:1.5px solid #2a2823;
+  flex-shrink:0;margin-top:1px;
+}
+.ci-text{font-size:12.5px;color:#c9c4b6;line-height:1.5}
+
+/* ── DIVIDER ── */
+.div{height:1px;background:#1e1c18;margin:48px 0}
+
+/* ── INLINE CODE ── */
+code{
+  font-family:'Geist Mono',monospace;font-size:.88em;
+  background:#111110;border:1px solid #1e1c18;border-radius:4px;
+  padding:1px 6px;color:#d4cfc0;
+}
+
+/* ── HIGHLIGHT ROW ── */
+.hl-row{
+  display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;
+}
+.hl-card{
+  flex:1;min-width:160px;background:#1a1917;border:1px solid #2a2823;
+  border-radius:12px;padding:20px;text-align:center;
+}
+.hl-num{font-family:'Fraunces',serif;font-size:44px;line-height:1;margin-bottom:4px}
+.hl-label{font-family:'Geist Mono',monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.8px;color:#55524a}
+.hl-c1 .hl-num{color:#5ec88a}
+.hl-c2 .hl-num{color:#f6a84a}
+.hl-c3 .hl-num{color:#6ea8f5}
+.hl-c4 .hl-num{color:#b794f4}
+.hl-c5 .hl-num{color:#f87171}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-eyebrow">Agentes Zap · Plano Estratégico · Maio 2026</div>
+  <h1>Artemis<br><em>de produto a plataforma.</em></h1>
+  <p class="cover-lead">
+    O Artemis nasceu como um bot para uma escola. Este documento é o plano para transformá-lo
+    numa plataforma SaaS multi-tenant — onde qualquer empresa pode ter seu próprio agente de
+    WhatsApp com IA, persona personalizada, integrações e painel de controle.
+  </p>
+  <div class="cover-tags">
+    <span class="tag tag-green">Multi-tenant SaaS</span>
+    <span class="tag tag-green">Evolution API</span>
+    <span class="tag tag-blue">Frontend React</span>
+    <span class="tag tag-amber">6 Sprints · ~40 passos</span>
+    <span class="tag tag-red">Arquitetura reformulada</span>
+  </div>
+</div>
+
+<!-- VISÃO GERAL -->
+<div class="section">
+  <div class="section-label">01 · Diagnóstico</div>
+  <h2>O que temos e<br>onde queremos chegar</h2>
+  <p class="section-sub">O código atual é excelente para um cliente. A transição para SaaS exige mudanças estruturais — não uma reescrita, mas uma expansão cirúrgica.</p>
+
+  <div class="hl-row">
+    <div class="hl-card hl-c1"><div class="hl-num">1</div><div class="hl-label">Cliente atual</div></div>
+    <div class="hl-card hl-c2"><div class="hl-num">∞</div><div class="hl-label">Meta SaaS</div></div>
+    <div class="hl-card hl-c3"><div class="hl-num">6</div><div class="hl-label">Sprints</div></div>
+    <div class="hl-card hl-c4"><div class="hl-num">40+</div><div class="hl-label">Passos totais</div></div>
+    <div class="hl-card hl-c5"><div class="hl-num">2</div><div class="hl-label">Canais WhatsApp</div></div>
+  </div>
+
+  <div class="opinion">
+    <div class="opinion-head">⬡ Minha opinião — arquitetura geral</div>
+    <p>O projeto atual tem uma base sólida e pensada. A grande mudança para SaaS não é técnica no sentido difícil — é <strong>de escopo de dados</strong>. Cada tabela que existe hoje (User, ChatHistory) precisa pertencer a um Tenant. As configs que estão em JSON fixos precisam virar linhas de banco de dados, uma por cliente.</p>
+    <p>O maior risco aqui é fazer a migração pela metade: chegar num estado onde o código tem suporte a multi-tenant mas o banco ainda é pensado para um só cliente. <strong>A ordem correta é: banco primeiro, depois API, depois frontend.</strong></p>
+    <p>Sobre canais WhatsApp: use a <strong>Evolution API para o produto SaaS</strong> (cada cliente conecta seu próprio número via QR Code) e mantenha a Meta API como opção premium para quem tem WhatsApp Business verificado. Os dois não se excluem.</p>
+  </div>
+</div>
+
+<!-- COMPARATIVO META vs EVOLUTION -->
+<div class="section">
+  <div class="section-label">02 · Canal de Mensagens</div>
+  <h2>Meta API oficial<br><em>vs</em> Evolution API</h2>
+  <p class="section-sub">A escolha do canal impacta diretamente a capacidade de onboarding de clientes no SaaS. Cada opção tem trade-offs claros.</p>
+
+  <div class="compare">
+    <div class="compare-head">
+      <span>Critério</span>
+      <span>Meta API Oficial</span>
+      <span>Evolution API</span>
+    </div>
+    <div class="compare-row">
+      <div class="cr-label">Onboarding de cliente<small>Como o cliente conecta o número</small></div>
+      <div class="cr-partial">Aprovação Meta (~semanas)</div>
+      <div class="cr-yes">QR Code (minutos)</div>
+    </div>
+    <div class="compare-row">
+      <div class="cr-label">Envio de primeiro contato<small>Ativar conversa sem template</small></div>
+      <div class="cr-no">Templates aprovados apenas</div>
+      <div class="cr-yes">Qualquer mensagem</div>
+    </div>
+    <div class="compare-row">
+      <div class="cr-label">Risco de ban<small>Conta pode ser suspensa?</small></div>
+      <div class="cr-yes">Muito baixo (oficial)</div>
+      <div class="cr-partial">Médio (protocolo não-oficial)</div>
+    </div>
+    <div class="compare-row">
+      <div class="cr-label">Multi-número por cliente<small>Vários números no mesmo tenant</small></div>
+      <div class="cr-partial">Possível, custo alto</div>
+      <div class="cr-yes">Nativo, ilimitado</div>
+    </div>
+    <div class="compare-row">
+      <div class="cr-label">Custo por mensagem<small>Além do volume de servidor</small></div>
+      <div class="cr-partial">Cobrado por conversa/24h</div>
+      <div class="cr-yes">Apenas custo de infraestrutura</div>
+    </div>
+    <div class="compare-row">
+      <div class="cr-label">Mídias (imagem, PDF, áudio)<small>Enviar e receber arquivos</small></div>
+      <div class="cr-yes">Suportado</div>
+      <div class="cr-yes">Suportado (mais formatos)</div>
+    </div>
+    <div class="compare-row">
+      <div class="cr-label">Webhooks em tempo real<small>Eventos de entrega, leitura</small></div>
+      <div class="cr-yes">Sim</div>
+      <div class="cr-yes">Sim (mais granular)</div>
+    </div>
+    <div class="compare-row">
+      <div class="cr-label">Self-hosted<small>VPS própria do cliente ou sua</small></div>
+      <div class="cr-no">API da Meta apenas</div>
+      <div class="cr-yes">Sim — você já tem rodando</div>
+    </div>
+    <div class="compare-row">
+      <div class="cr-label">Viabilidade SaaS a curto prazo</div>
+      <div class="cr-no">Difícil (burocracia Meta)</div>
+      <div class="cr-yes">Alta (onboarding rápido)</div>
+    </div>
+  </div>
+
+  <div class="evo-box">
+    <div class="evo-title">Evolution API — Integração</div>
+    <div class="evo-sub">Você já tem uma VPS com Evolution rodando. O plano abaixo descreve como integrar ao Artemis mantendo a arquitetura atual e adicionando suporte multi-instância por tenant.</div>
+    <div class="evo-grid">
+      <div class="evo-item">
+        <h4>Conexão de instância por tenant</h4>
+        <p>Cada cliente cria uma instância na Evolution com um nome único (<code>artemis-{tenantId}</code>). O backend faz chamadas REST para a API da Evolution passando a instância correta por request.</p>
+      </div>
+      <div class="evo-item">
+        <h4>Webhook unificado no backend</h4>
+        <p>A Evolution envia todos os eventos para <code>POST /webhook/evolution</code> com o campo <code>instance</code> no payload. O controller resolve o tenant a partir desse campo e processa normalmente.</p>
+      </div>
+      <div class="evo-item">
+        <h4>QR Code de conexão via painel</h4>
+        <p>O frontend exibe um QR Code gerado pela Evolution API em tempo real. Quando o cliente escaneia, a instância fica conectada e o bot começa a funcionar. Zero burocracia.</p>
+      </div>
+      <div class="evo-item">
+        <h4>Envio de mensagens</h4>
+        <p>Substituir <code>WhatsAppService</code> por um <code>EvolutionService</code> que chama <code>POST /message/sendText/{instance}</code>. A interface de chamada no <code>BotService</code> não muda.</p>
+      </div>
+    </div>
+    <div class="evo-warning">
+      <strong>Risco calculado:</strong> A Evolution API usa o protocolo WhatsApp Web (não oficial). Contas podem ser banidas em caso de comportamento suspeito (volume muito alto, spam, scraping). Para mitigar: limite de mensagens por hora por instância, warm-up de números novos, e nunca enviar para contatos que nunca iniciaram conversa com o número. Para clientes que precisam de garantia corporativa, ofereça a Meta API como plano premium.
+    </div>
+  </div>
+
+  <div class="opinion">
+    <div class="opinion-head">⬡ Minha recomendação — estratégia de canal</div>
+    <p><strong>Curto prazo (MVP SaaS):</strong> use apenas a Evolution API. O onboarding por QR Code é o que vai fazer o produto funcionar de verdade — nenhum cliente vai esperar semanas para aprovar uma conta Meta só para testar seu produto.</p>
+    <p><strong>Médio prazo:</strong> crie uma abstração <code>MessagingProvider</code> no backend que pode usar Evolution ou Meta API. Cada tenant escolhe qual quer. Assim você não está preso a nenhum dos dois.</p>
+    <p><strong>Sobre a sua VPS com Evolution:</strong> perfeito para começar. Quando o produto crescer, cada cliente poderá ter a Evolution rodando no próprio servidor deles — você só precisa do endpoint e da API Key deles para conectar.</p>
+  </div>
+</div>
+
+<!-- ARQUITETURA MULTI-TENANT -->
+<div class="section">
+  <div class="section-label">03 · Arquitetura</div>
+  <h2>Multi-tenant —<br><em>como estruturar</em></h2>
+  <p class="section-sub">A arquitetura nova precisa isolar dados entre clientes sem sacrificar a performance. O modelo escolhido é shared database com tenant_id — o mais prático para começar.</p>
+
+  <div class="arch">
+    <div class="arch-layers">
+      <div class="arch-layer al-front">
+        <div class="layer-label">Frontend React</div>
+        <div class="layer-items">
+          <span class="layer-chip active">Dashboard</span>
+          <span class="layer-chip active">Agentes</span>
+          <span class="layer-chip active">Conversas</span>
+          <span class="layer-chip active">Leads</span>
+          <span class="layer-chip active">Configurações</span>
+          <span class="layer-chip active">Integrações</span>
+          <span class="layer-chip">Billing (futuro)</span>
+        </div>
+      </div>
+      <div class="arch-arrow">↕</div>
+      <div class="arch-layer al-api">
+        <div class="layer-label">API REST</div>
+        <div class="layer-items">
+          <span class="layer-chip active">Auth (JWT)</span>
+          <span class="layer-chip active">Tenants</span>
+          <span class="layer-chip active">Agents</span>
+          <span class="layer-chip active">Conversations</span>
+          <span class="layer-chip active">Webhook WhatsApp</span>
+          <span class="layer-chip active">Webhook Asaas</span>
+          <span class="layer-chip active">Webhook Respondi</span>
+        </div>
+      </div>
+      <div class="arch-arrow">↕</div>
+      <div class="arch-layer al-core">
+        <div class="layer-label">Core Services</div>
+        <div class="layer-items">
+          <span class="layer-chip active">AIService (Gemini)</span>
+          <span class="layer-chip active">MessagingProvider</span>
+          <span class="layer-chip active">EvolutionService</span>
+          <span class="layer-chip active">MetaService</span>
+          <span class="layer-chip active">CalendarService</span>
+          <span class="layer-chip active">AsaasService</span>
+          <span class="layer-chip active">StateService</span>
+          <span class="layer-chip active">PromptBuilder</span>
+        </div>
+      </div>
+      <div class="arch-arrow">↕</div>
+      <div class="arch-layer al-data">
+        <div class="layer-label">Banco de Dados</div>
+        <div class="layer-items">
+          <span class="layer-chip active">Tenant</span>
+          <span class="layer-chip active">TenantUser (admin)</span>
+          <span class="layer-chip active">Agent</span>
+          <span class="layer-chip active">Lead (ex-User)</span>
+          <span class="layer-chip active">ChatHistory</span>
+          <span class="layer-chip active">ProcessedEvent</span>
+          <span class="layer-chip active">Program</span>
+          <span class="layer-chip active">AgentPersona</span>
+        </div>
+      </div>
+      <div class="arch-arrow">↕</div>
+      <div class="arch-layer al-ext">
+        <div class="layer-label">Externo</div>
+        <div class="layer-items">
+          <span class="layer-chip active">Evolution API (VPS)</span>
+          <span class="layer-chip active">Google Gemini</span>
+          <span class="layer-chip active">Asaas</span>
+          <span class="layer-chip active">Google Calendar</span>
+          <span class="layer-chip active">Respondi</span>
+          <span class="layer-chip">Meta API (futuro)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCHEMA NOVO -->
+  <div class="grid-2" style="gap:16px;margin-bottom:16px">
+    <div class="schema">
+      <div class="schema-title">🏢 Tenant</div>
+      <div class="schema-body">
+        <div class="schema-field"><span class="sf-name">id</span><span class="sf-type">String</span><span class="sf-desc">UUID único do cliente/empresa</span></div>
+        <div class="schema-field"><span class="sf-name">name</span><span class="sf-type">String</span><span class="sf-desc">Nome da empresa</span></div>
+        <div class="schema-field"><span class="sf-name">slug</span><span class="sf-type">String</span><span class="sf-desc">Identificador de URL (ex: "confluence")</span></div>
+        <div class="schema-field"><span class="sf-name">plan</span><span class="sf-type">String</span><span class="sf-desc">free | starter | pro | enterprise</span></div>
+        <div class="schema-field"><span class="sf-name">evolutionInstance</span><span class="sf-type">String?</span><span class="sf-desc">Nome da instância na Evolution API</span></div>
+        <div class="schema-field"><span class="sf-name">evolutionApiKey</span><span class="sf-type">String?</span><span class="sf-desc">API Key do servidor Evolution do cliente</span></div>
+        <div class="schema-field"><span class="sf-name">evolutionBaseUrl</span><span class="sf-type">String?</span><span class="sf-desc">URL da VPS Evolution (pode ser a sua)</span></div>
+        <div class="schema-field"><span class="sf-name">isActive</span><span class="sf-type">Boolean</span><span class="sf-desc">Tenant habilitado/desabilitado</span></div>
+        <div class="schema-field"><span class="sf-name">createdAt</span><span class="sf-type">DateTime</span><span class="sf-desc">Data de criação</span></div>
+      </div>
+    </div>
+    <div class="schema">
+      <div class="schema-title">🤖 Agent</div>
+      <div class="schema-body">
+        <div class="schema-field"><span class="sf-name">id</span><span class="sf-type">String</span><span class="sf-desc">UUID do agente</span></div>
+        <div class="schema-field"><span class="sf-name">tenantId</span><span class="sf-type">String</span><span class="sf-desc">FK para Tenant</span></div>
+        <div class="schema-field"><span class="sf-name">name</span><span class="sf-type">String</span><span class="sf-desc">Nome do agente (ex: "Artemis")</span></div>
+        <div class="schema-field"><span class="sf-name">personaJson</span><span class="sf-type">Json</span><span class="sf-desc">Conteúdo do persona.json por agente</span></div>
+        <div class="schema-field"><span class="sf-name">programsJson</span><span class="sf-type">Json</span><span class="sf-desc">Conteúdo do programs.json por agente</span></div>
+        <div class="schema-field"><span class="sf-name">settingsJson</span><span class="sf-type">Json</span><span class="sf-desc">Conteúdo do settings.json por agente</span></div>
+        <div class="schema-field"><span class="sf-name">geminiModel</span><span class="sf-type">String</span><span class="sf-desc">Modelo Gemini configurado</span></div>
+        <div class="schema-field"><span class="sf-name">isActive</span><span class="sf-type">Boolean</span><span class="sf-desc">Agente ligado/desligado (killswitch)</span></div>
+        <div class="schema-field"><span class="sf-name">whatsappNumber</span><span class="sf-type">String?</span><span class="sf-desc">Número WhatsApp conectado</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="gap:16px">
+    <div class="schema">
+      <div class="schema-title">👤 Lead (antigo User) — agora com tenantId</div>
+      <div class="schema-body">
+        <div class="schema-field"><span class="sf-name">id</span><span class="sf-type">String</span><span class="sf-desc">UUID</span></div>
+        <div class="schema-field"><span class="sf-name">tenantId</span><span class="sf-type">String</span><span class="sf-desc">FK para Tenant — <strong style="color:#f87171">campo novo e obrigatório</strong></span></div>
+        <div class="schema-field"><span class="sf-name">agentId</span><span class="sf-type">String</span><span class="sf-desc">FK para Agent — qual agente atendeu</span></div>
+        <div class="schema-field"><span class="sf-name">phoneNumber</span><span class="sf-type">String</span><span class="sf-desc">Único por tenant (não mais global)</span></div>
+        <div class="schema-field"><span class="sf-name">enrollmentStatus</span><span class="sf-type">String</span><span class="sf-desc">LEAD | PAYMENT_PENDING | ENROLLED | CANCELLED</span></div>
+        <div class="schema-field"><span class="sf-name">... demais campos</span><span class="sf-type">...</span><span class="sf-desc">Todos os campos atuais são mantidos</span></div>
+      </div>
+    </div>
+    <div class="schema">
+      <div class="schema-title">🔐 TenantUser (admin do painel)</div>
+      <div class="schema-body">
+        <div class="schema-field"><span class="sf-name">id</span><span class="sf-type">String</span><span class="sf-desc">UUID</span></div>
+        <div class="schema-field"><span class="sf-name">tenantId</span><span class="sf-type">String</span><span class="sf-desc">FK para Tenant</span></div>
+        <div class="schema-field"><span class="sf-name">email</span><span class="sf-type">String</span><span class="sf-desc">Email de login</span></div>
+        <div class="schema-field"><span class="sf-name">passwordHash</span><span class="sf-type">String</span><span class="sf-desc">bcrypt hash da senha</span></div>
+        <div class="schema-field"><span class="sf-name">role</span><span class="sf-type">String</span><span class="sf-desc">owner | admin | viewer</span></div>
+        <div class="schema-field"><span class="sf-name">lastLoginAt</span><span class="sf-type">DateTime?</span><span class="sf-desc">Último acesso</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PLANO DE SPRINTS -->
+<div class="section">
+  <div class="section-label">04 · Execução</div>
+  <h2>Plano de<br><em>desenvolvimento</em></h2>
+  <p class="section-sub">6 sprints interligados. Frontend nasce cedo — cada tela é construída junto da API que ela consome. Ao final de cada sprint você tem algo visual para testar, não só código no terminal.</p>
+
+  <!-- VISUAL: o que você vê ao fim de cada sprint -->
+  <div style="background:#111110;border:1px solid #1e1c18;border-radius:14px;padding:20px 24px;margin-bottom:32px">
+    <div style="font-family:'Geist Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#3a3630;margin-bottom:14px">O que você consegue VER e TESTAR ao final de cada sprint</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:grid;grid-template-columns:36px 80px 1fr;gap:12px;align-items:center;padding:10px 14px;background:#1a1917;border-radius:8px;border:1px solid #1e1c18">
+        <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:700;color:#5ec88a">A</span>
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;color:#3a3630;text-transform:uppercase;letter-spacing:.5px">DB</span>
+        <span style="font-size:13px;color:#55524a">Banco multi-tenant pronto. Nada visual — fundação necessária.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:36px 80px 1fr;gap:12px;align-items:center;padding:10px 14px;background:#1a1917;border-radius:8px;border:1px solid #1b6b4d">
+        <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:700;color:#5ec88a">B</span>
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;color:#5ec88a;text-transform:uppercase;letter-spacing:.5px">Auth + UI Shell</span>
+        <span style="font-size:13px;color:#c9c4b6">✦ <strong style="color:#f1ecdc">Você consegue fazer login no painel</strong> e ver o layout com sidebar e topbar. Páginas vazias, mas navegáveis.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:36px 80px 1fr;gap:12px;align-items:center;padding:10px 14px;background:#1a1917;border-radius:8px;border:1px solid #a83a2a">
+        <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:700;color:#f87171">C</span>
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;color:#f87171;text-transform:uppercase;letter-spacing:.5px">Evolution + QR</span>
+        <span style="font-size:13px;color:#c9c4b6">✦ <strong style="color:#f1ecdc">Você conecta seu WhatsApp pelo painel</strong> escaneando QR Code. Instância aparece como "conectada". Bot começa a receber mensagens via Evolution.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:36px 80px 1fr;gap:12px;align-items:center;padding:10px 14px;background:#1a1917;border-radius:8px;border:1px solid #1a4d8f">
+        <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:700;color:#6ea8f5">D</span>
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;color:#6ea8f5;text-transform:uppercase;letter-spacing:.5px">Conversas + Leads</span>
+        <span style="font-size:13px;color:#c9c4b6">✦ <strong style="color:#f1ecdc">Você vê conversas reais acontecendo em tempo real</strong> na tela. Tabela de leads com estado FSM de cada um. Histórico de chat completo com um clique.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:36px 80px 1fr;gap:12px;align-items:center;padding:10px 14px;background:#1a1917;border-radius:8px;border:1px solid #a86a1a">
+        <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:700;color:#f6a84a">E</span>
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;color:#f6a84a;text-transform:uppercase;letter-spacing:.5px">Dashboard + Config</span>
+        <span style="font-size:13px;color:#c9c4b6">✦ <strong style="color:#f1ecdc">Você vê métricas reais e edita a persona do agente pelo painel</strong> sem editar código. Publicar salva no banco e reflete imediatamente nas respostas.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:36px 80px 1fr;gap:12px;align-items:center;padding:10px 14px;background:#1a1917;border-radius:8px;border:1px solid #5b3b9e">
+        <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:700;color:#b794f4">F</span>
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;color:#b794f4;text-transform:uppercase;letter-spacing:.5px">Onboarding</span>
+        <span style="font-size:13px;color:#c9c4b6">✦ <strong style="color:#f1ecdc">Um segundo cliente se registra sozinho</strong>, escaneia QR Code e o bot dele já está funcionando. SaaS real.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sprint A -->
+  <div class="sprint-block">
+    <div class="sprint-header">
+      <div class="sprint-num sn-1">A</div>
+      <div class="sprint-info">
+        <h3>Base Multi-tenant — Banco de Dados</h3>
+        <p>Fundação necessária. Sem isso nada mais funciona. Nenhuma tela neste sprint.</p>
+      </div>
+      <div class="sprint-flag sf-1">Crítico — primeiro</div>
+    </div>
+    <div class="sprint-body">
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-n">A1</div>
+          <div>
+            <div class="step-title">Criar modelo Tenant no schema Prisma</div>
+            <div class="step-desc">Adicionar modelo <code>Tenant</code> com campos: id, name, slug, plan, evolutionInstance, evolutionApiKey, evolutionBaseUrl, isActive, createdAt. Criar migration.</div>
+          </div>
+          <div class="step-file">prisma/schema.prisma</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">A2</div>
+          <div>
+            <div class="step-title">Criar modelo TenantUser no schema</div>
+            <div class="step-desc">Admins do painel. Campos: id, tenantId, email, passwordHash, role (owner/admin/viewer), lastLoginAt. Instalar <code>bcrypt</code>.</div>
+          </div>
+          <div class="step-file">prisma/schema.prisma</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">A3</div>
+          <div>
+            <div class="step-title">Adicionar tenantId ao modelo User e corrigir unicidade</div>
+            <div class="step-desc">Adicionar <code>tenantId String</code> e <code>agentId String?</code>. Mudar constraint: <code>@@unique([phoneNumber, tenantId])</code> — mesmo telefone pode ser lead de tenants diferentes.</div>
+          </div>
+          <div class="step-file">prisma/schema.prisma</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">A4</div>
+          <div>
+            <div class="step-title">Criar modelo Agent no schema</div>
+            <div class="step-desc">Campos: id, tenantId, name, personaJson, programsJson, settingsJson, geminiModel, isActive, whatsappNumber. Tenant tem muitos Agents. Agent tem muitos Leads.</div>
+          </div>
+          <div class="step-file">prisma/schema.prisma</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">A5</div>
+          <div>
+            <div class="step-title">Criar migration e seed do Tenant inicial</div>
+            <div class="step-desc">Executar <code>prisma migrate dev --name multi_tenant_base</code>. Criar <code>prisma/seed.ts</code> que popula Tenant da Confluence como primeiro registro, com TenantUser owner e Agent com os JSONs atuais de config.</div>
+          </div>
+          <div class="step-file">prisma/migrations/ · prisma/seed.ts</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sprint B -->
+  <div class="sprint-block">
+    <div class="sprint-header">
+      <div class="sprint-num sn-2">B</div>
+      <div class="sprint-info">
+        <h3>Auth JWT + Frontend Shell</h3>
+        <p>Backend: login endpoint. Frontend: projeto React, design system, login, layout navegável. Resultado: painel com login funcionando.</p>
+      </div>
+      <div class="sprint-flag sf-2">Após Sprint A · 🖥 Primeiro visual</div>
+    </div>
+    <div class="sprint-body">
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-n">B1</div>
+          <div>
+            <div class="step-title">Backend — Endpoints de autenticação JWT</div>
+            <div class="step-desc">Instalar <code>jsonwebtoken</code>. Endpoints: <code>POST /auth/login</code> (retorna access + refresh token), <code>POST /auth/refresh</code>, <code>POST /auth/logout</code>. JWT payload inclui <code>tenantId</code> e <code>userId</code>. Middleware <code>src/middlewares/auth.ts</code> valida token e injeta <code>req.tenantId</code>.</div>
+          </div>
+          <div class="step-file">src/controllers/AuthController.ts · src/middlewares/auth.ts</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">B2</div>
+          <div>
+            <div class="step-title">Frontend — Criar projeto React + Vite + TypeScript</div>
+            <div class="step-desc">Criar em <code>packages/dashboard/</code>. Instalar: <code>react-router-dom</code>, <code>@tanstack/react-query</code>, <code>axios</code>. Configurar fontes Geist + Fraunces (Google Fonts). Extrair CSS variables dos exemplos (<code>--ink-1..5</code>, <code>--paper</code>, <code>--accent</code>, <code>--amber</code>, <code>--danger</code>) para <code>tokens.css</code>.</div>
+          </div>
+          <div class="step-file">packages/dashboard/ (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">B3</div>
+          <div>
+            <div class="step-title">Frontend — Componentes base do design system</div>
+            <div class="step-desc">Criar componentes usando exatamente os estilos dos JSX de exemplo: <code>Button</code> (normal + primary), <code>Toggle</code>, <code>Card</code>, <code>Badge</code>, <code>Input</code>. Referência: <code>v1-cockpit.jsx</code> e <code>v3-composer.jsx</code> já têm os estilos prontos.</div>
+          </div>
+          <div class="step-file">src/components/ (design system)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">B4</div>
+          <div>
+            <div class="step-title">Frontend — Tela de Login</div>
+            <div class="step-desc">Background <code>#0f0f0e</code> (igual ao hub dos exemplos). Cartão central com logo, email + senha, botão "Entrar". Ao fazer login: salvar JWT em <code>localStorage</code>, redirecionar para <code>/dashboard</code>. Exibir erro se credenciais inválidas.</div>
+          </div>
+          <div class="step-file">src/pages/Login.tsx</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">B5</div>
+          <div>
+            <div class="step-title">Frontend — AuthContext + Layout Shell</div>
+            <div class="step-desc">Context com: usuário logado, tenantId, função logout. Interceptor Axios: adiciona Bearer token em todo request, redireciona para login se 401. Layout <code>AppLayout.tsx</code>: sidebar esquerda com nav links (Dashboard, Conversas, Leads, Integrações, Config), topbar com breadcrumb estilo dos exemplos. Páginas internas renderizadas como placeholders por ora.</div>
+          </div>
+          <div class="step-file">src/contexts/AuthContext.tsx · src/layouts/AppLayout.tsx</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sprint C -->
+  <div class="sprint-block">
+    <div class="sprint-header">
+      <div class="sprint-num sn-3">C</div>
+      <div class="sprint-info">
+        <h3>Evolution API + Tela de Integrações</h3>
+        <p>Backend: EvolutionService + webhook. Frontend: tela de Integrações com QR Code real. Resultado: conectar WhatsApp pelo painel.</p>
+      </div>
+      <div class="sprint-flag sf-3">Após Sprint B · 🖥 QR Code visual</div>
+    </div>
+    <div class="sprint-body">
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-n">C1</div>
+          <div>
+            <div class="step-title">Backend — EvolutionService</div>
+            <div class="step-desc">Criar <code>src/services/EvolutionService.ts</code>. Métodos via Axios para a VPS Evolution: <code>sendText(instance, phone, text)</code>, <code>getQRCode(instance)</code> → retorna base64 do QR, <code>getInstanceStatus(instance)</code> → retorna open/closed/connecting. Ler <code>EVOLUTION_BASE_URL</code> e <code>EVOLUTION_API_KEY</code> do env.</div>
+          </div>
+          <div class="step-file">src/services/EvolutionService.ts (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">C2</div>
+          <div>
+            <div class="step-title">Backend — Abstração MessagingProvider</div>
+            <div class="step-desc">Interface <code>IMessagingProvider</code> com <code>sendMessage(to, text)</code>. Criar <code>EvolutionProvider</code> e <code>MetaProvider</code> implementando a interface. BotService recebe provider injetado baseado na config do tenant — sem mudar lógica de negócio.</div>
+          </div>
+          <div class="step-file">src/services/MessagingProvider.ts (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">C3</div>
+          <div>
+            <div class="step-title">Backend — Webhook Evolution</div>
+            <div class="step-desc">Endpoint <code>POST /webhook/evolution</code>. Payload Evolution contém campo <code>instance</code>. Resolver tenantId buscando Tenant por <code>evolutionInstance = instance</code>. Reaproveitar toda lógica de debounce + FSM existente do WebhookController atual.</div>
+          </div>
+          <div class="step-file">src/controllers/EvolutionWebhookController.ts (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">C4</div>
+          <div>
+            <div class="step-title">Backend — Endpoints de gestão de instância</div>
+            <div class="step-desc"><code>POST /api/instances/create</code> (cria instância na Evolution), <code>GET /api/instances/qrcode</code> (retorna QR base64), <code>GET /api/instances/status</code> (open/closed/connecting), <code>DELETE /api/instances/disconnect</code>. Todos protegidos pelo middleware auth — usam tenantId do JWT para isolar.</div>
+          </div>
+          <div class="step-file">src/controllers/InstanceController.ts (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">C5</div>
+          <div>
+            <div class="step-title">Frontend — Tela de Integrações</div>
+            <div class="step-desc">Card WhatsApp: status da instância (badge verde/vermelho), botão "Conectar" abre modal com <code>&lt;img&gt;</code> do QR Code base64 em polling a cada 3s até status virar "open". Cards de outras integrações: Asaas (campo API Key + salvar), Google Calendar (upload de credencial ou OAuth), Respondi (campo secret).</div>
+          </div>
+          <div class="step-file">src/pages/Integrations.tsx</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sprint D -->
+  <div class="sprint-block">
+    <div class="sprint-header">
+      <div class="sprint-num sn-4">D</div>
+      <div class="sprint-info">
+        <h3>API de Dados + Conversas e Leads</h3>
+        <p>Backend: endpoints de leads e conversas. Frontend: telas de Conversas e Leads com dados reais. Resultado: ver o bot trabalhando ao vivo.</p>
+      </div>
+      <div class="sprint-flag sf-4">Após Sprint C · 🖥 Conversas ao vivo</div>
+    </div>
+    <div class="sprint-body">
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-n">D1</div>
+          <div>
+            <div class="step-title">Backend — Endpoints de leads e conversas</div>
+            <div class="step-desc"><code>GET /api/leads</code> (lista paginada, filtro por estado FSM, busca por nome/telefone), <code>GET /api/leads/:id</code> (perfil completo + histórico ChatHistory), <code>GET /api/conversations</code> (conversas recentes com última mensagem). Todos filtrados por <code>req.tenantId</code> — nunca retornar dados de outro tenant.</div>
+          </div>
+          <div class="step-file">src/controllers/LeadsController.ts (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">D2</div>
+          <div>
+            <div class="step-title">Frontend — Tela de Conversas (split view)</div>
+            <div class="step-desc">Inspirada em V2 Console. Lista à esquerda: cada item tem avatar, nome, último trecho de mensagem, badge com estado FSM, timestamp. Filtro por estado no topo. Click na conversa: abre chat completo à direita com histórico, cada mensagem com role (lead/agente) e timestamp. Estado FSM atual no header do chat.</div>
+          </div>
+          <div class="step-file">src/pages/Conversations.tsx</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">D3</div>
+          <div>
+            <div class="step-title">Frontend — Tela de Leads (tabela + sidebar)</div>
+            <div class="step-desc">Tabela com colunas: nome, telefone, programa, estado FSM, enrollmentStatus, última interação. Click na linha: abre sidebar deslizante com todos os campos do banco (name, age, goal, cpf, email, enrollmentStatus, etc.). Sidebar tem botão "Forçar handoff" e "Resetar estado".</div>
+          </div>
+          <div class="step-file">src/pages/Leads.tsx</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">D4</div>
+          <div>
+            <div class="step-title">Backend — Ações sobre leads (handoff e reset)</div>
+            <div class="step-desc"><code>PATCH /api/leads/:id/state</code> permite forçar o estado FSM de um lead (usado pelo botão "Forçar handoff"). <code>DELETE /api/leads/:id</code> exclui o lead e histórico (LGPD) com confirmação.</div>
+          </div>
+          <div class="step-file">src/controllers/LeadsController.ts</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sprint E -->
+  <div class="sprint-block">
+    <div class="sprint-header">
+      <div class="sprint-num sn-5">E</div>
+      <div class="sprint-info">
+        <h3>Dashboard + Configuração do Agente + Settings</h3>
+        <p>Backend: métricas e config endpoints. Frontend: Dashboard, Config do agente, Settings. Resultado: editar persona pelo painel sem tocar no código.</p>
+      </div>
+      <div class="sprint-flag sf-5">Após Sprint D · 🖥 Tudo configurável</div>
+    </div>
+    <div class="sprint-body">
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-n">E1</div>
+          <div>
+            <div class="step-title">Backend — Endpoint de métricas</div>
+            <div class="step-desc"><code>GET /api/metrics</code> retorna: total de leads, conversas nas últimas 24h, taxa de conversão (ENROLLED / total), distribuição por estado FSM, matrículas recentes. Tudo filtrado por tenantId.</div>
+          </div>
+          <div class="step-file">src/controllers/MetricsController.ts (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">E2</div>
+          <div>
+            <div class="step-title">Frontend — Dashboard</div>
+            <div class="step-desc">Hero estilo V3 Composer: avatar do agente, nome, dot ao vivo. Stats abaixo: conversas hoje, resolução %, leads novos, matrículas. Grid mostrando distribuição dos leads por estado FSM (6 estados como cards). Lista de últimas matrículas.</div>
+          </div>
+          <div class="step-file">src/pages/Dashboard.tsx</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">E3</div>
+          <div>
+            <div class="step-title">Backend — Endpoints de configuração do agente</div>
+            <div class="step-desc"><code>GET /api/agent</code> retorna agente do tenant. <code>PATCH /api/agent/persona</code>, <code>PATCH /api/agent/programs</code>, <code>PATCH /api/agent/settings</code> atualizam os campos Json no banco. Validar schema mínimo antes de salvar (não aceitar persona sem campo name, etc.).</div>
+          </div>
+          <div class="step-file">src/controllers/AgentController.ts (novo)</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">E4</div>
+          <div>
+            <div class="step-title">Frontend — Configuração do Agente (PowerCards)</div>
+            <div class="step-desc">Cópia direta da estrutura do V3 Composer. Hero com avatar + nome + "ao vivo". PowerCards expansíveis: Personalidade (tom, restrições, emoji rules), Programas (lista editável com preço/texto), Handoff (links e mensagens), LGPD (configurações de retenção). Botão "Publicar" salva via PATCH e mostra toast de confirmação.</div>
+          </div>
+          <div class="step-file">src/pages/Agent.tsx</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">E5</div>
+          <div>
+            <div class="step-title">Frontend — Configurações (conta, usuários, perigo)</div>
+            <div class="step-desc">Dados do tenant (nome, slug — só owner pode editar). Gestão de admins (lista, convidar por email, revogar). Troca de senha. Zona de perigo: desativar agente (killswitch global), exportar todos os dados LGPD como JSON, excluir conta (confirmar digitando nome do tenant).</div>
+          </div>
+          <div class="step-file">src/pages/Settings.tsx</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sprint F -->
+  <div class="sprint-block">
+    <div class="sprint-header">
+      <div class="sprint-num sn-6">F</div>
+      <div class="sprint-info">
+        <h3>Onboarding SaaS — Cadastro Público de Novos Clientes</h3>
+        <p>Backend: registro de tenant. Frontend: página de registro + wizard 3 passos. Resultado: segundo cliente totalmente autônomo.</p>
+      </div>
+      <div class="sprint-flag sf-6">Após Sprint E · 🖥 SaaS real</div>
+    </div>
+    <div class="sprint-body">
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-n">F1</div>
+          <div>
+            <div class="step-title">Backend — Endpoint de registro de tenant</div>
+            <div class="step-desc"><code>POST /auth/register</code> cria Tenant + TenantUser owner + Agent padrão em transação única. Validações: email único globalmente, slug único, nome obrigatório. Retorna JWT direto (não precisa logar separado). Agent criado com persona/programs/settings padrão copiados dos arquivos de config atuais.</div>
+          </div>
+          <div class="step-file">src/controllers/AuthController.ts · src/services/TenantService.ts</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">F2</div>
+          <div>
+            <div class="step-title">Frontend — Página de registro pública</div>
+            <div class="step-desc">Background escuro estilo hub dos exemplos. Campos: nome da empresa, email, senha, nome do agente. Botão "Criar conta" chama <code>POST /auth/register</code>, salva JWT, redireciona para wizard de onboarding. Link "Já tem conta? Entrar" vai para Login.</div>
+          </div>
+          <div class="step-file">src/pages/Register.tsx</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">F3</div>
+          <div>
+            <div class="step-title">Frontend — Wizard de onboarding (3 passos)</div>
+            <div class="step-desc">Passo 1 — Persona: nome do agente, tom (chips selecionáveis), idioma. Salva via <code>PATCH /api/agent/persona</code>. Passo 2 — WhatsApp: botão "Conectar", modal com QR Code ao vivo (mesmo componente do Sprint C). Passo 3 — Integrações opcionais: Asaas + Calendar (pular disponível). Ao finalizar: redireciona para Dashboard com mensagem "Seu agente está pronto".</div>
+          </div>
+          <div class="step-file">src/pages/Onboarding.tsx</div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">F4</div>
+          <div>
+            <div class="step-title">Backend — Isolamento total de webhook por tenant</div>
+            <div class="step-desc">Garantir que o webhook Evolution resolve corretamente o tenant pelo campo <code>instance</code> mesmo com 10+ tenants registrados. Adicionar log estruturado por tenantId para facilitar debug de problemas de um cliente específico sem afetar os outros.</div>
+          </div>
+          <div class="step-file">src/controllers/EvolutionWebhookController.ts</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PLANO DE TELAS -->
+<div class="section">
+  <div class="section-label">05 · Frontend Visual</div>
+  <h2>As 6 telas do<br><em>painel de controle</em></h2>
+  <p class="section-sub">Design baseado exatamente no sistema das telas de exemplo — fontes Geist + Fraunces, paleta papel quente, accent verde. Cada tela tem uma referência de qual protótipo inspirou.</p>
+
+  <div class="grid-3" style="gap:16px">
+
+    <div class="screen-card">
+      <div class="screen-preview">
+        <div class="screen-mini">
+          <div class="screen-mini-bar"></div>
+          <div class="screen-mini-row">
+            <div class="screen-mini-block sm"></div>
+            <div class="screen-mini-block sm"></div>
+            <div class="screen-mini-block sm"></div>
+            <div class="screen-mini-block sm"></div>
+          </div>
+          <div class="screen-mini-block hero"></div>
+          <div class="screen-mini-row">
+            <div class="screen-mini-block accent"></div>
+            <div class="screen-mini-block accent"></div>
+          </div>
+          <div class="screen-mini-block list active"></div>
+          <div class="screen-mini-block list"></div>
+          <div class="screen-mini-block list"></div>
+        </div>
+      </div>
+      <div class="screen-label">
+        <h4>Dashboard</h4>
+        <p>Hero com stats do agente, gráfico de conversas por dia, distribuição de estados FSM e matrículas recentes.</p>
+        <div class="screen-tags">
+          <span class="screen-tag">V3 Composer inspired</span>
+          <span class="screen-tag">Hero + Stats</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-preview">
+        <div class="screen-mini">
+          <div class="screen-mini-bar"></div>
+          <div class="screen-mini-block hero"></div>
+          <div class="screen-mini-row">
+            <div class="screen-mini-block accent"></div>
+            <div class="screen-mini-block sm"></div>
+          </div>
+          <div class="screen-mini-block list active" style="height:32px;margin-bottom:6px"></div>
+          <div class="screen-mini-block list" style="height:32px;margin-bottom:6px"></div>
+          <div class="screen-mini-block list" style="height:32px"></div>
+        </div>
+      </div>
+      <div class="screen-label">
+        <h4>Configuração do Agente</h4>
+        <p>PowerCards expansíveis para Persona, Programas, Handoff, LGPD. Botão Publicar. Inspirado no V3 Composer diretamente.</p>
+        <div class="screen-tags">
+          <span class="screen-tag">V3 Composer direto</span>
+          <span class="screen-tag">PowerCards</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-preview">
+        <div class="screen-mini">
+          <div class="screen-mini-bar"></div>
+          <div class="screen-mini-row">
+            <div class="screen-mini-side">
+              <div class="screen-mini-sideitem active"></div>
+              <div class="screen-mini-sideitem"></div>
+              <div class="screen-mini-sideitem"></div>
+              <div class="screen-mini-sideitem"></div>
+            </div>
+            <div style="flex:1">
+              <div class="screen-mini-block hero" style="height:120px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">
+        <h4>Conversas</h4>
+        <p>Split view: lista de conversas à esquerda com filtro por estado FSM, chat completo à direita com histórico e estado atual.</p>
+        <div class="screen-tags">
+          <span class="screen-tag">V2 Console inspired</span>
+          <span class="screen-tag">Split view</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-preview">
+        <div class="screen-mini">
+          <div class="screen-mini-bar"></div>
+          <div class="screen-mini-row" style="margin-bottom:3px">
+            <div class="screen-mini-block" style="height:14px"></div>
+            <div class="screen-mini-block" style="height:14px"></div>
+            <div class="screen-mini-block" style="height:14px"></div>
+            <div class="screen-mini-block" style="height:14px"></div>
+          </div>
+          <div class="screen-mini-block list"></div>
+          <div class="screen-mini-block list active"></div>
+          <div class="screen-mini-block list"></div>
+          <div class="screen-mini-block list"></div>
+          <div class="screen-mini-block list"></div>
+          <div class="screen-mini-block list active"></div>
+        </div>
+      </div>
+      <div class="screen-label">
+        <h4>Leads</h4>
+        <p>Tabela com todos os leads. Click abre sidebar com perfil completo, histórico de conversa e status de pagamento Asaas.</p>
+        <div class="screen-tags">
+          <span class="screen-tag">V1 Cockpit inspired</span>
+          <span class="screen-tag">Tabela + Sidebar</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-preview">
+        <div class="screen-mini">
+          <div class="screen-mini-bar"></div>
+          <div class="screen-mini-block hero" style="background:var(--accent-soft);border:1px solid #c9d8d0"></div>
+          <div class="screen-mini-row">
+            <div class="screen-mini-block" style="height:40px"></div>
+            <div class="screen-mini-block" style="height:40px"></div>
+          </div>
+          <div class="screen-mini-row">
+            <div class="screen-mini-block" style="height:40px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">
+        <h4>Integrações</h4>
+        <p>QR Code para conectar WhatsApp via Evolution. Cards para Asaas, Google Calendar e Respondi. Status de cada integração em tempo real.</p>
+        <div class="screen-tags">
+          <span class="screen-tag">Evolution QR Code</span>
+          <span class="screen-tag">Status cards</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-preview">
+        <div class="screen-mini">
+          <div class="screen-mini-bar"></div>
+          <div class="screen-mini-row">
+            <div class="screen-mini-block sm" style="height:40px;border-radius:50%"></div>
+            <div style="flex:1">
+              <div class="screen-mini-block list" style="height:12px;margin-bottom:4px;width:70%"></div>
+              <div class="screen-mini-block list" style="height:10px;width:40%"></div>
+            </div>
+          </div>
+          <div class="screen-mini-block list" style="margin-top:12px"></div>
+          <div class="screen-mini-block list"></div>
+          <div class="screen-mini-block list" style="background:var(--danger-soft)"></div>
+        </div>
+      </div>
+      <div class="screen-label">
+        <h4>Configurações</h4>
+        <p>Dados do tenant, usuários admin, troca de senha, plano atual. Zona de perigo: desativar agente, exportar dados LGPD.</p>
+        <div class="screen-tags">
+          <span class="screen-tag">Account settings</span>
+          <span class="screen-tag">Danger zone</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- OPINIÃO FINAL -->
+<div class="section">
+  <div class="section-label">06 · Visão</div>
+  <h2>Minha leitura<br><em>sobre o projeto</em></h2>
+
+  <div class="opinion">
+    <div class="opinion-head">⬡ O que está muito certo</div>
+    <p>O funil de vendas no bot é o ativo mais valioso. A lógica de 6 estados FSM, os prompts por estado em XML, o tratamento de objeções em 3 camadas — isso é produto, não é código. É o que diferencia o Artemis de um chatbot genérico. <strong>Não mexa nisso sem razão.</strong></p>
+    <p>A persona no <code>config/persona.json</code> é extremamente bem elaborada. As restrições absolutas, o protocolo teen, a transferência para humano com 4 tipos distintos — isso tudo precisa virar configurável por tenant no painel. É o coração do produto SaaS.</p>
+  </div>
+
+  <div class="opinion">
+    <div class="opinion-head">⬡ O que vai ser o diferencial competitivo</div>
+    <p>A maioria dos "bots de WhatsApp com IA" no mercado brasileiro são fluxos lineares com respostas fixas. O Artemis tem <strong>memória persistente, FSM inteligente, tool calling real (Asaas + Calendar) e persona configurável</strong>. Isso é raro. Quando empacotar isso com onboarding por QR Code, a proposta de valor é clara: seu bot de vendas com IA, configurado em 10 minutos, conectado ao seu WhatsApp.</p>
+    <p>O design das telas de exemplo também é um diferencial de posicionamento — <strong>é sofisticado, editorial, não parece um painel de bot barato</strong>. Isso importa para o cliente final perceber valor premium.</p>
+  </div>
+
+  <div class="opinion">
+    <div class="opinion-head">⬡ O que eu priorizaria</div>
+    <p><strong>Primeiro:</strong> feche os 23 passos do plano original (estabilização, segurança, testes). Sistema instável não escala — você vai debugar em produção com clientes reais olhando.</p>
+    <p><strong>Segundo:</strong> Sprint A (banco) → Sprint B (auth + UI shell). Aqui você já tem painel com login. <strong>Terceiro:</strong> Sprint C (Evolution + QR Code na tela). Aqui você conecta WhatsApp pelo próprio painel. A partir desse ponto cada sprint entrega uma tela nova com dados reais — sem esperar o frontend inteiro pronto para ver alguma coisa.</p>
+    <p><strong>Não faça:</strong> monetizar/billing antes de ter 3 clientes pagantes. Valide primeiro que o produto funciona para mais de uma empresa.</p>
+  </div>
+
+  <div class="opinion">
+    <div class="opinion-head">⬡ Sobre a Evolution API</div>
+    <p>É a escolha certa para o MVP SaaS. O fato de você já ter uma VPS rodando é uma vantagem enorme — você não precisa convencer clientes a pagar pela Meta API para começar a usar. O risco de ban existe mas é gerenciável com volume razoável e bom comportamento. Quando tiver clientes corporativos que precisam de garantia, você já terá a abstração <code>MessagingProvider</code> pronta para plugar a Meta API sem reescrever nada.</p>
+  </div>
+
+  <!-- Flow final -->
+  <div class="flow">
+    <div class="flow-node fn-warm">Sprints 1–5<br><small style="font-weight:400;font-size:10px">Estabilização atual</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node fn-warm">Sprint A<br><small style="font-weight:400;font-size:10px">DB multi-tenant</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node fn-red">Sprint B<br><small style="font-weight:400;font-size:10px">Auth + UI Shell 🖥</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node fn-red">Sprint C<br><small style="font-weight:400;font-size:10px">Evolution + QR 🖥</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node fn-blue">Sprint D<br><small style="font-weight:400;font-size:10px">Conversas + Leads 🖥</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node fn-amber">Sprint E<br><small style="font-weight:400;font-size:10px">Dashboard + Config 🖥</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node fn-purple">Sprint F<br><small style="font-weight:400;font-size:10px">Onboarding SaaS 🖥</small></div>
+  </div>
+</div>
+
+<!-- CHECKLIST FINAL -->
+<div class="section">
+  <div class="section-label">07 · Aceite</div>
+  <h2>Critérios para<br><em>MVP SaaS pronto</em></h2>
+  <div class="checklist">
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Todos os 23 passos do plano original concluídos</div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Modelo <code>Tenant</code> criado com migration aplicada</div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Todos os dados filtrados por <code>tenantId</code> — zero vazamento entre clientes</div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Evolution API integrada — <code>EvolutionService</code> funcional</div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Webhook Evolution processa mensagens corretamente por instância</div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">QR Code de conexão funcionando no painel</div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Login JWT funcionando — token com <code>tenantId</code></div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Segundo tenant criado e testado com número WhatsApp diferente</div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Dois tenants ativos sem interferência entre conversas</div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Dashboard mostrando dados reais do tenant logado</div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Conversas visíveis e filtráveis no painel</div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Persona configurável pelo painel e publicável sem rebuild</div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Fluxo de onboarding completo: registro → QR Code → agente ativo</div></div>
+    <div class="ci"><div class="ci-box"></div><div class="ci-text">Design das telas usando exatamente fontes e paleta dos exemplos</div></div>
+  </div>
+</div>
+
+</div><!-- /page -->
+
+<footer style="border-top:1px solid #1e1c18;padding:32px 40px;max-width:1120px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
+  <span style="font-family:'Fraunces',serif;font-size:18px;color:#f1ecdc;font-weight:400">Agentes Zap</span>
+  <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#3a3630">Artemis Bot · Plano SaaS · Maio 2026</span>
+</footer>
+
+</body>
+</html>

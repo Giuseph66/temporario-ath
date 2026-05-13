@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Agentes Zap — Galeria de Protótipos</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" />
+<style>
+  :root {
+    --ink-1:#14130f;
+    --ink-2:#2a2823;
+    --ink-3:#55524a;
+    --ink-4:#8a8579;
+    --ink-5:#b8b3a6;
+    --paper:#faf9f5;
+    --paper-2:#f3f1ea;
+    --paper-3:#e9e6db;
+    --line:#e3dfd3;
+    --line-2:#d4cfbf;
+    --accent:#1b6b4d;
+    --accent-soft:#e6f0eb;
+    --accent-ink:#0d4a36;
+    --radius:16px;
+  }
+
+  html, body {
+    margin:0; padding:0; height:100%;
+    background: #0f0f0e; /* Darker for the hub */
+    color: #f1ecdc;
+    font-family: 'Geist', -apple-system, system-ui, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hub {
+    max-width: 1000px;
+    width: 100%;
+    padding: 40px;
+    text-align: center;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 48px;
+    font-weight: 400;
+    letter-spacing: -1.5px;
+    margin: 0 0 12px;
+  }
+
+  p {
+    color: var(--ink-4);
+    font-size: 18px;
+    margin-bottom: 48px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .card {
+    background: #1a1917;
+    border: 1px solid #2a2823;
+    border-radius: var(--radius);
+    padding: 32px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card:hover {
+    background: #22211f;
+    border-color: var(--accent);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+  }
+
+  .version {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  .card h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 400;
+    margin: 0 0 8px;
+  }
+
+  .card p {
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+    color: var(--ink-4);
+    flex-grow: 1;
+  }
+
+  .card .arrow {
+    margin-top: 24px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+  }
+
+  .badge {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255,255,255,0.05);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-family: 'Geist Mono', monospace;
+    color: var(--ink-5);
+  }
+</style>
+</head>
+<body>
+
+<div class="hub">
+  <h1>Agentes Zap</h1>
+  <p>Escolha uma variação para visualizar o protótipo standalone.</p>
+
+  <div class="grid">
+    <a href="v1-cockpit.html" class="card">
+      <div class="badge">LEGACY</div>
+      <div class="version">V1</div>
+      <h2>Cockpit</h2>
+      <p>Foco total em um agente. Visão minimalista e premium com detalhes expandidos.</p>
+      <div class="arrow">Visualizar tela <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+    </a>
+
+    <a href="v2-console.html" class="card">
+      <div class="version">V2</div>
+      <h2>Console</h2>
+      <p>Interface densa inspirada no Linear. Split view com log de execução em tempo real.</p>
+      <div class="arrow">Visualizar tela <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+    </a>
+
+    <a href="v3-composer.html" class="card">
+      <div class="badge">NOVO</div>
+      <div class="version">V3</div>
+      <h2>Composer</h2>
+      <p>Layout editorial com cards expansíveis ricos e controles de configuração granular.</p>
+      <div class="arrow">Visualizar tela <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+    </a>
+  </div>
+</div>
+
+</body>
+</html>

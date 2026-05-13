@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import { verifyWebhook, handleWebhook } from './controllers/WebhookController';
 import { handleAsaasWebhook } from './controllers/AsaasWebhookController';
 import { handleRespondiWebhook } from './controllers/RespondiController';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './utils/prisma';
 
 dotenv.config();
 
@@ -44,15 +44,13 @@ app.listen(port, () => {
 // ── LGPD Cleanup Cron (runs every 24 hours) ──────────────────────────────────
 // LGPD Arts. 15 & 16 — Eliminação completa de leads não convertidos inativos há 30+ dias.
 // Deleta o registro inteiro do usuário + histórico de chat (cascade).
-const prismaForCron = new PrismaClient();
-
 setInterval(async () => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     try {
         // Busca IDs dos leads a eliminar antes de deletar (para log)
-        const toDelete = await prismaForCron.user.findMany({
+        const toDelete = await prisma.user.findMany({
             where: {
                 lastInteraction: { lt: thirtyDaysAgo },
                 asaasCustomerId: null // Nunca comprou / gerou link de pagamento
@@ -62,7 +60,7 @@ setInterval(async () => {
 
         if (toDelete.length > 0) {
             // Deleta em cascata: ChatHistory é removido automaticamente (onDelete: Cascade)
-            const result = await prismaForCron.user.deleteMany({
+            const result = await prisma.user.deleteMany({
                 where: {
                     lastInteraction: { lt: thirtyDaysAgo },
                     asaasCustomerId: null

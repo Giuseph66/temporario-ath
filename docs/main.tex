@@ -1,0 +1,456 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+\geometry{margin=2.2cm}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue!60!black
+}
+
+\definecolor{artemisBlue}{HTML}{17324D}
+\definecolor{artemisGreen}{HTML}{217A5B}
+\definecolor{artemisGold}{HTML}{B8872B}
+\definecolor{artemisRed}{HTML}{9B2D20}
+\definecolor{lightGray}{HTML}{F3F5F7}
+
+\titleformat{\section}
+  {\Large\bfseries\color{artemisBlue}}
+  {\thesection}{0.8em}{}
+
+\titleformat{\subsection}
+  {\large\bfseries\color{artemisBlue}}
+  {\thesubsection}{0.8em}{}
+
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{artemisBlue}}
+  {\thesubsubsection}{0.8em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{14pt}
+\lhead{\textbf{Artemis Bot}}
+\rhead{Auditoria e proposta de conclusao}
+\cfoot{\thepage\ de \pageref{LastPage}}
+
+\emergencystretch=2em
+\sloppy
+
+\setlist[itemize]{leftmargin=1.2em}
+\setlist[enumerate]{leftmargin=1.4em}
+\renewcommand{\arraystretch}{1.25}
+
+\newcommand{\statusok}{\textcolor{artemisGreen}{Implementado}}
+\newcommand{\statuspartial}{\textcolor{artemisGold}{Parcial}}
+\newcommand{\statusrisk}{\textcolor{artemisRed}{Critico}}
+\newcommand{\statusmissing}{\textcolor{artemisRed}{Pendente}}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{2.0cm}
+  {\Huge\bfseries\color{artemisBlue} Artemis Bot\par}
+  \vspace{0.4cm}
+  {\Large Relatorio executivo, auditoria comparativa e proposta de conclusao\par}
+  \vspace{1.2cm}
+  {\large Assistente de IA para WhatsApp com integrações de CRM, agenda e pagamento\par}
+  \vfill
+  \begin{tabular}{rl}
+    \textbf{Cliente:} & Confluence Treinamento \\
+    \textbf{Base analisada:} & Repositorio local Artemis-Bot + planejamento em PDF \\
+    \textbf{Data:} & 24/04/2026 \\
+    \textbf{Status:} & Desenvolvimento avancado, pendente de endurecimento tecnico \\
+  \end{tabular}
+  \vfill
+  {\small Documento preparado para avaliacao comercial e tecnica. Valores e prazos sao estimativas e devem ser confirmados apos fechamento formal de escopo.}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{Mensagem executiva ao cliente}
+
+O Artemis Bot ja ultrapassou a fase de ideia. O que existe hoje nao e apenas um chatbot simples: e uma aplicacao TypeScript sob medida, integrada ao WhatsApp oficial, banco de dados, IA generativa, Google Calendar, Asaas e formulario Respondi. Isso significa que o projeto ja tem uma base real de produto, com automacao de atendimento, qualificacao comercial, agendamento e cobranca.
+
+O ponto central da avaliacao e este: o projeto foi iniciado com apoio de IA e ja possui uma quantidade relevante de implementacao, mas ainda precisa passar por uma etapa profissional de conclusao. Essa etapa nao e simplesmente ``continuar escrevendo codigo''. O trabalho correto agora e transformar uma base funcional em uma entrega confiavel, segura, documentada e defensavel perante o cliente final.
+
+Como CEO ou responsavel pela entrega, eu apresentaria o Artemis da seguinte forma:
+
+\begin{quote}
+  O projeto Artemis ja tem o nucleo do produto implementado. Ele conversa pelo WhatsApp, entende o estagio do lead, salva historico, qualifica o aluno, apresenta programas, trata objecoes, agenda no calendario e gera cobrancas. A etapa restante e a mais importante para uma entrega profissional: seguranca, testes, validacao de fluxos, estabilizacao de integracoes, documentacao operacional e preparacao para producao.
+\end{quote}
+
+O valor agregado nao esta apenas no bot responder mensagens. O valor esta em reduzir trabalho manual, responder leads com consistencia, preservar contexto, encaminhar o cliente pelo funil comercial e automatizar pontos que normalmente dependem de uma pessoa: cadastro, agenda, pagamento e confirmacao.
+
+\section{Resumo de valor entregue}
+
+\subsection{O que o cliente recebe}
+
+\begin{itemize}
+  \item Um assistente de WhatsApp com IA personalizado para a Confluence Treinamento.
+  \item Uma arquitetura propria em Node.js e TypeScript, sem depender de construtores visuais limitados.
+  \item Memoria persistente de conversas em PostgreSQL.
+  \item Fluxo comercial por estados: saudacao, qualificacao, apresentacao, objecao, fechamento e humano.
+  \item Integracao com Meta WhatsApp Business API.
+  \item Integracao com Google Gemini para respostas e extracao de dados.
+  \item Integracao com Google Calendar para agenda.
+  \item Integracao com Asaas para cliente, cobranca, assinatura e cancelamento.
+  \item Integracao com Respondi para formulario de matricula.
+  \item Regras de LGPD: consentimento, exclusao de dados e retencao de leads inativos.
+  \item Configuracao de persona, programas e mensagens sem alterar codigo.
+\end{itemize}
+
+\subsection{Por que isso tem valor comercial}
+
+Um atendimento humano pode perder leads por demora, inconsistência ou falta de follow-up. O Artemis tenta resolver esse gargalo com disponibilidade continua e processo padronizado. Alem disso, ao integrar agenda e pagamento, o sistema reduz a distancia entre ``tenho interesse'' e ``matricula iniciada''.
+
+Na pratica, o ativo entregue e uma automacao comercial com IA, nao apenas uma conversa automatica. Isso justifica tratar o projeto como software sob medida, com fase de estabilizacao e manutencao, e nao como configuracao simples de chatbot.
+
+\section{Estimativa comercial de conclusao}
+
+\subsection{Premissas}
+
+A estimativa abaixo considera que o cliente ja trouxe uma base iniciada e que o trabalho contratado agora seria concluir, estabilizar e preparar a entrega para uso real. Nao inclui custos de terceiros, como Meta, Asaas, Google, VPS, dominio, certificados, banco gerenciado ou mensalidade de APIs.
+
+Referencias publicas recentes de mercado indicam ampla variacao de custo para desenvolvimento sob medida e horas tecnicas senior no Brasil. Foram usadas apenas como baliza externa, nao como tabela obrigatoria: ha fontes citando hora de desenvolvimento na faixa de R\$ 120--180/h para software sob medida, faixa ampla de freelancer autonomo entre R\$ 68--243/h e projetos de software variando muito conforme risco e complexidade.\footnote{\url{https://www.aegisai.com.br/blog/preco-desenvolvimento-software-sob-medida-2026}}\footnote{\url{https://www.freelasemcrise.com.br/quanto-cobra/desenvolvedor-software/sao-paulo}}\footnote{\url{https://www.neryx.com.br/blog/custo-desenvolvimento-software-brasil-2026/}}
+
+\subsection{Escopo recomendado para fechar o projeto}
+
+\begin{longtable}{p{0.28\textwidth}p{0.18\textwidth}p{0.44\textwidth}}
+\toprule
+\textbf{Frente} & \textbf{Esforco estimado} & \textbf{Entrega} \\
+\midrule
+Auditoria tecnica e organizacao & 12--20 h & Revisao da base, definicao de riscos, ajuste de README, envs e runbook. \\
+Seguranca e producao & 24--40 h & Validacao webhook Asaas, remocao de logs sensiveis, graceful shutdown, Calendar ID por ambiente. \\
+Banco e infraestrutura de app & 16--28 h & Prisma Singleton, migrations, historico correto, ajustes de deploy. \\
+Testes e QA & 32--56 h & Testes unitarios de FSM, normalizador, pagamentos, prompts e checklist end-to-end. \\
+Refinamento de funil & 24--44 h & Ajuste de protocolo teen, PRM, midias nao suportadas, fechamento e handoff. \\
+Deploy assistido e transferencia & 16--28 h & Subida controlada, validacao sandbox, documentacao operacional e treinamento. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Proposta de investimento}
+
+Para uma entrega profissional, eu recomendaria apresentar tres opcoes:
+
+\begin{longtable}{p{0.20\textwidth}p{0.18\textwidth}p{0.22\textwidth}p{0.30\textwidth}}
+\toprule
+\textbf{Plano} & \textbf{Prazo} & \textbf{Investimento} & \textbf{Quando usar} \\
+\midrule
+Essencial & 2--3 semanas & R\$ 18.000--26.000 & Corrigir riscos criticos, documentar e deixar rodando com QA manual limitado. \\
+Profissional & 4--6 semanas & R\$ 32.000--48.000 & Recomendado. Inclui seguranca, testes, QA, deploy assistido e documentacao de operacao. \\
+Produto & 8--10 semanas & R\$ 58.000--85.000 & Inclui melhorias de produto, painel/observabilidade inicial, status de matricula e preparacao para evolucao SaaS. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Preco recomendado para esta oportunidade}
+
+Para este caso especifico, considerando que ja existe uma base funcional e que o cliente quer concluir com seguranca, minha recomendacao comercial seria:
+
+\begin{center}
+\fcolorbox{artemisBlue}{lightGray}{
+  \begin{minipage}{0.86\textwidth}
+    \centering
+    \vspace{0.2cm}
+    {\Large\bfseries Proposta recomendada: R\$ 38.000}\\
+    \vspace{0.2cm}
+    Prazo estimado: 5 semanas\\
+    Escopo: estabilizacao tecnica, seguranca, testes essenciais, QA completo do funil, documentacao e deploy assistido.\\
+    \vspace{0.2cm}
+  \end{minipage}
+}
+\end{center}
+
+Manutencao opcional apos entrega:
+
+\begin{itemize}
+  \item R\$ 2.500--3.500/mês para suporte leve, ajustes de prompt e acompanhamento.
+  \item R\$ 4.500--6.500/mês para suporte com evolucoes mensais, monitoramento e melhorias continuas.
+\end{itemize}
+
+\subsection{Como defender o preco}
+
+O argumento nao deve ser ``vou terminar um bot''. O argumento correto e:
+
+\begin{quote}
+  Vamos transformar um prototipo avancado em um sistema operacional de vendas e atendimento, com integracoes reais de calendario, pagamento, dados e WhatsApp oficial. O trabalho inclui seguranca, testes, estabilidade e transferencia para que a Confluence consiga usar isso como ativo de negocio, nao como experimento.
+\end{quote}
+
+\section{Veredito tecnico resumido}
+
+O projeto real esta muito proximo do planejamento em arquitetura geral, stack, integracoes principais e intencao de produto. A base tem os 16 arquivos TypeScript citados no planejamento e soma 2.728 linhas de TypeScript em \texttt{src/}, alinhado com o documento original.
+
+\subsection{Pontos fortes}
+
+\begin{itemize}
+  \item Estrutura modular clara: controllers, services, flow, types e utils.
+  \item FSM de conversa implementada.
+  \item Debounce por usuario no webhook principal.
+  \item Prompt dinamico por estado em XML.
+  \item Gemini com tool calling para agenda e pagamentos.
+  \item Asaas para cliente, cobranca, assinatura e cancelamento.
+  \item Google Calendar para disponibilidade, criacao, busca e cancelamento.
+  \item Respondi com validacao por token e normalizacao de telefone.
+  \item Banco PostgreSQL via Prisma.
+  \item Preocupacao real com LGPD.
+\end{itemize}
+
+\subsection{Riscos antes de producao}
+
+\begin{itemize}
+  \item Webhook Asaas aceita eventos sem assinatura, secret ou verificacao de origem.
+  \item Existem multiplas instancias diretas de \texttt{PrismaClient}.
+  \item Nao existe suite de testes.
+  \item Nao existem migrations Prisma versionadas.
+  \item Nao existe \texttt{.env.example}, configuracao PM2 ou runbook de deploy completo no repositorio.
+  \item README esta desatualizado e cita OpenAI/variaveis antigas.
+  \item Calendar ID esta hardcoded para um email pessoal/teste.
+  \item Nao ha graceful shutdown.
+  \item Parte do comportamento critico depende de prompt, nao de validacao backend.
+\end{itemize}
+
+\section{Inventario real do projeto}
+
+\subsection{Arquivos encontrados}
+
+\begin{longtable}{p{0.42\textwidth}p{0.48\textwidth}}
+\toprule
+\textbf{Arquivo} & \textbf{Funcao no projeto} \\
+\midrule
+\texttt{package.json} & Define scripts, dependencias e entrada de producao. Contem Express, Prisma, Gemini, Google APIs, Axios e utilitarios. \\
+\texttt{package-lock.json} & Trava versoes instaladas das dependencias npm. \\
+\texttt{tsconfig.json} & Configura compilacao TypeScript para CommonJS, target ES2020 e saida em \texttt{dist/}. \\
+\texttt{prisma.config.ts} & Configuracao Prisma apontando para \texttt{prisma/schema.prisma} e \texttt{DATABASE\_URL}. \\
+\texttt{README.md} & Documentacao inicial, porem desatualizada em variaveis e provedor de IA. \\
+\texttt{prisma/schema.prisma} & Define modelos \texttt{User} e \texttt{ChatHistory}. \\
+\texttt{config/persona.json} & Persona, tom, restricoes, objecoes, contratos e links de protocolo. \\
+\texttt{config/programs.json} & Programas vendidos, precos, duracao e textos informativos. \\
+\texttt{config/settings.json} & Mensagens e numeros de suporte/handoff. \\
+\texttt{src/index.ts} & Inicializa Express, registra rotas e cron LGPD. \\
+\texttt{src/controllers/WebhookController.ts} & Webhook principal WhatsApp, debounce, processamento background, handoff e envio de respostas. \\
+\texttt{src/controllers/AsaasWebhookController.ts} & Recebe eventos Asaas e envia confirmacao de pagamento ao usuario. \\
+\texttt{src/controllers/RespondiController.ts} & Recebe formulario Respondi, valida token, extrai campos e faz upsert do usuario. \\
+\texttt{src/flow/StateResolver.ts} & Resolve estado conversacional e tipos de transferencia humana. \\
+\texttt{src/services/AIService.ts} & Integra Gemini, extrai perfil, gera resposta e executa ferramentas de agenda/pagamento. \\
+\texttt{src/services/AsaasService.ts} & Busca/cria clientes, gera cobrancas/assinaturas e cancela pendencias no Asaas. \\
+\texttt{src/services/CalendarService.ts} & Verifica disponibilidade, cria, busca e cancela eventos no Google Calendar. \\
+\texttt{src/services/ConfigLoader.ts} & Carrega arquivos JSON de configuracao. \\
+\texttt{src/services/PromptBuilder.ts} & Monta prompt XML por estado da conversa. \\
+\texttt{src/services/StateService.ts} & Gerencia usuario, historico, perfil, estado e exclusao LGPD. \\
+\texttt{src/services/WhatsAppService.ts} & Envia mensagens pela Meta Graph API. \\
+\texttt{src/types/user.ts} & Define estados de conversa e tipos de usuario. \\
+\texttt{src/types/config.ts} & Define tipos TypeScript para persona, programas e settings. \\
+\texttt{src/utils/prisma.ts} & Singleton Prisma para acesso ao banco. \\
+\texttt{src/utils/phoneNormalizer.ts} & Normaliza telefones brasileiros para formato canonico. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Contagem local}
+
+\begin{tabularx}{\textwidth}{Xr}
+\toprule
+\textbf{Grupo} & \textbf{Linhas} \\
+\midrule
+TypeScript em \texttt{src/} & 2.728 \\
+Config JSON & 119 \\
+Prisma schema & 50 \\
+README & 51 \\
+Total auditado localmente & 3.059 \\
+\bottomrule
+\end{tabularx}
+
+\section{Matriz comparativa}
+
+\begin{longtable}{p{0.25\textwidth}p{0.16\textwidth}p{0.49\textwidth}}
+\toprule
+\textbf{Area} & \textbf{Status} & \textbf{Leitura tecnica} \\
+\midrule
+TypeScript/Node.js & \statusok & Stack real bate com o planejamento. \\
+Express HTTP API & \statusok & Rotas principais existem. \\
+PostgreSQL + Prisma & \statuspartial & Schema existe, mas sem migrations versionadas. \\
+User + ChatHistory & \statusok & Campos batem com o planejamento. \\
+FSM com 6 estados & \statusok & Estado e resolucao implementados em TypeScript. \\
+Debounce 5s & \statusok & Buffer por usuario existe. \\
+Resposta 200 imediata Meta & \statusok & ACK acontece antes do processamento pesado. \\
+PromptBuilder XML & \statusok & Ponto forte da arquitetura. \\
+Gemini principal & \statusok & Usa \texttt{gemini-3.1-pro-preview}. \\
+Gemini extracao JSON & \statusok & Usa \texttt{gemini-2.5-flash}. \\
+Tool calling 6 ferramentas & \statusok & 4 ferramentas Calendar + 2 Asaas. \\
+Filtro de raciocinio & \statuspartial & Existe heuristica, mas nao e garantia formal. \\
+Google Calendar & \statuspartial & Funcional, mas Calendar ID hardcoded. \\
+Asaas & \statuspartial & Cobranca existe; webhook sem validacao e risco critico. \\
+Respondi & \statusok & Valida token e faz upsert. \\
+LGPD exclusao & \statusok & Delecao com cascade implementada. \\
+LGPD retencao 30 dias & \statuspartial & Cron existe, mas usa Prisma separado e \texttt{setInterval}. \\
+Graceful shutdown & \statusmissing & Nao implementado. \\
+Testes & \statusmissing & Sem arquivos de teste. \\
+QA end-to-end & \statusmissing & Sem cenarios automatizados ou evidencias. \\
+SaaS multi-tenant & \statusmissing & Roadmap futuro, nao implementado. \\
+\bottomrule
+\end{longtable}
+
+\section{Comparativo por area funcional}
+
+\subsection{Arquitetura principal}
+
+O planejamento previa uma aplicacao em camadas com FSM, debounce, PromptBuilder e ConfigLoader. Isso esta implementado. O codigo separa controllers, services, flow, types e utils, o que e positivo para manutencao.
+
+O ponto de atencao e que a serializacao por usuario ainda e limitada ao debounce. Se uma conversa gerar processamento longo e o usuario mandar outra rajada, pode haver concorrencia entre processamentos do mesmo numero. Para producao, uma fila por usuario seria mais segura.
+
+\subsection{Inteligencia artificial}
+
+O projeto usa Gemini em duas funcoes: resposta principal e extracao de perfil. A resposta principal recebe prompt dinamico por estado e pode chamar ferramentas. A extracao tenta preencher nome, idade, objetivo e alvo da matricula.
+
+O desenho e bom, mas regras criticas ainda estao concentradas no prompt. Em sistemas com pagamento, agenda e LGPD, o backend deve validar regras essenciais antes de executar a acao.
+
+\subsection{Funil comercial}
+
+O funil existe e cobre saudacao, qualificacao, apresentacao, objecoes, fechamento e transferencia humana. A maior divergencia e que a ordem atual de qualificacao coleta nome, alvo da matricula, idade e objetivo; o planejamento falava em objetivo e idade primeiro.
+
+Tambem existe diferenca na regra teen: o documento fala 14--16 em alguns trechos, enquanto o prompt usa 12--17 em outros. Essa regra precisa ser unificada antes da entrega.
+
+\subsection{Asaas}
+
+O Asaas esta bem encaminhado para criacao de cliente, cobranca, assinatura, link e cancelamento. O maior problema e o webhook: hoje qualquer origem poderia simular pagamento confirmado se souber o endpoint e o formato do payload.
+
+Esse e o principal item de seguranca antes de producao.
+
+\subsection{Google Calendar}
+
+As quatro operacoes principais existem. O sistema verifica disponibilidade antes de criar evento e suporta recorrencia semanal.
+
+Problemas atuais:
+\begin{itemize}
+  \item Calendar ID hardcoded.
+  \item Credencial esperada em arquivo local nao documentado adequadamente.
+  \item Regras de horario comercial ficam no prompt, nao no backend.
+\end{itemize}
+
+\subsection{Respondi}
+
+O Respondi esta implementado de forma funcional. O controller valida token, extrai respostas por titulo, normaliza telefone e atualiza/cria usuario.
+
+O principal ajuste e reduzir logs com dados pessoais. Payload bruto com CPF, email e endereco nao deve ir para log de producao.
+
+\subsection{LGPD}
+
+Ha uma preocupacao real com LGPD: consentimento, exclusao por solicitacao, cascade delete e retencao de leads inativos.
+
+Ainda faltam:
+\begin{itemize}
+  \item Fluxo deterministico para acesso/correcao de dados.
+  \item Politica de log sem dados pessoais.
+  \item Retencao clara para clientes convertidos.
+\end{itemize}
+
+\section{O que ja foi feito}
+
+\begin{itemize}
+  \item Servidor Express com rotas principais.
+  \item Webhook WhatsApp com ACK imediato.
+  \item Debounce por usuario de 5 segundos.
+  \item Persistencia de usuario e historico.
+  \item Normalizacao de telefone brasileiro.
+  \item FSM conversacional.
+  \item Extracao de perfil com Gemini.
+  \item Resposta principal com Gemini.
+  \item Prompt dinamico por estado.
+  \item Tool calling com Calendar e Asaas.
+  \item Envio de WhatsApp via Meta Graph API.
+  \item Intake Respondi.
+  \item Cadastro, assinatura, cobranca e cancelamento no Asaas.
+  \item Confirmacao de pagamento via webhook.
+  \item Integracao Google Calendar.
+  \item Exclusao LGPD.
+  \item Retencao de leads inativos por 30 dias.
+  \item Configuracao por JSON.
+\end{itemize}
+
+\section{O que falta fazer}
+
+\subsection{Prioridade critica}
+
+\begin{enumerate}
+  \item Validar webhook Asaas.
+  \item Remover instancias diretas de \texttt{new PrismaClient()}.
+  \item Adicionar graceful shutdown.
+  \item Corrigir busca das ultimas 20 mensagens.
+  \item Criar testes unitarios para regras centrais.
+  \item Criar \texttt{.env.example}.
+  \item Criar migrations Prisma versionadas.
+\end{enumerate}
+
+\subsection{Prioridade alta}
+
+\begin{enumerate}
+  \item Mover Calendar ID para variavel de ambiente.
+  \item Validar horario comercial no backend.
+  \item Adicionar idempotencia no webhook Asaas.
+  \item Remover logs de payload bruto com dados pessoais.
+  \item Atualizar README.
+  \item Criar checklist QA end-to-end.
+  \item Criar script/config PM2.
+\end{enumerate}
+
+\subsection{Prioridade media}
+
+\begin{enumerate}
+  \item Transformar regras criticas de prompt em validacoes backend.
+  \item Adicionar status de matricula/pagamento no banco.
+  \item Melhorar roteamento deterministico para PRM.
+  \item Tipar melhor sessoes e perfis.
+  \item Remover codigo morto.
+  \item Criar logs estruturados.
+\end{enumerate}
+
+\section{Plano de entrega recomendado}
+
+\begin{longtable}{p{0.18\textwidth}p{0.24\textwidth}p{0.48\textwidth}}
+\toprule
+\textbf{Semana} & \textbf{Foco} & \textbf{Entregas} \\
+\midrule
+1 & Organizacao e riscos & README, envs, Prisma Singleton, historico correto, plano QA. \\
+2 & Seguranca & Webhook Asaas protegido, logs sensiveis removidos, Calendar env. \\
+3 & Testes essenciais & FSM, normalizador, PromptBuilder, calculos Asaas, Respondi. \\
+4 & Funil e integracoes & Ajuste teen/PRM, midias nao suportadas, QA sandbox Calendar/Asaas. \\
+5 & Deploy e transferencia & Build limpo, PM2, runbook, checklist final, treinamento e aceite. \\
+\bottomrule
+\end{longtable}
+
+\section{Criterios de aceite}
+
+\begin{itemize}
+  \item Build TypeScript limpo.
+  \item Migrations aplicadas por fluxo controlado.
+  \item Webhook Asaas protegido e idempotente.
+  \item Logs sem dados pessoais sensiveis.
+  \item QA manual documentado.
+  \item Testes unitarios cobrindo regras centrais.
+  \item Graceful shutdown.
+  \item Configuracao de producao sem Calendar ID hardcoded.
+  \item README/runbook coerente com o codigo real.
+  \item Fluxos principais validados em sandbox.
+\end{itemize}
+
+\section{Conclusao}
+
+O Artemis Bot tem uma base valiosa e funcional. Ele cobre grande parte do planejamento original e mostra que o produto pode virar uma automacao comercial real para a Confluence. Ao mesmo tempo, ainda nao deve ser vendido como producao madura sem a etapa de endurecimento tecnico.
+
+A proposta correta e posicionar a entrega como conclusao profissional de um sistema ja iniciado: corrigir riscos, proteger integracoes financeiras, documentar operacao, testar fluxos e preparar deploy. Com esse enquadramento, a proposta recomendada de R\$ 38.000 por aproximadamente 5 semanas e defensavel, desde que o escopo seja fechado e os custos de terceiros fiquem fora do pacote.
+
+\end{document}

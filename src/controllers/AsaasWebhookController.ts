@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { WhatsAppService } from '../services/WhatsAppService';
 
-const prisma = new PrismaClient();
 const whatsapp = new WhatsAppService();
 
 /**
