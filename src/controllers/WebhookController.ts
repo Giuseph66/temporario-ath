@@ -22,7 +22,7 @@ const debounceBuffer = new Map<string, BufferEntry>();
 
 const DEBOUNCE_MS = 5000; // 5 seconds of silence before processing
 
-function scheduleProcessing(from: string, text: string): void {
+export function scheduleProcessing(from: string, text: string): void {
     const existing = debounceBuffer.get(from);
 
     if (existing) {
@@ -153,10 +153,30 @@ async function processMessages(from: string, messageBody: string): Promise<void>
             const consentWords = ['sim', 'pode', 'claro', 'aceito', 'concordo', 'ok', 'tudo bem', 'pode sim', 'pode ser'];
             if (consentWords.some(w => msgLower.includes(w))) {
                 await prisma.user.update({
-                    where: { phoneNumber: from },
+                    where: { id: session.id },
                     data: { lgpdConsent: true },
                 });
                 console.log(`✅ [LGPD] Consentimento registrado para ${from}`);
+            }
+        }
+
+        // ── 5.6. Passo 18 — Salvar currentProgramId deterministicamente ─────────
+        // Aplica regra de negócio: 14-16 → techlab, 17+ → personalizado
+        // Só salva se ainda não definido (não sobrescreve escolha explícita).
+        if (session.age && !session.currentProgramId) {
+            let programId: string | null = null;
+            if (session.age >= 14 && session.age <= 16) {
+                programId = 'ingles_techlab';
+            } else if (session.age >= 17) {
+                programId = 'ingles_personalizado';
+            }
+            if (programId) {
+                await prisma.user.update({
+                    where: { id: session.id },
+                    data: { currentProgramId: programId },
+                });
+                session.currentProgramId = programId;
+                console.log(`📚 currentProgramId definido: ${programId} (idade: ${session.age})`);
             }
         }
 
@@ -313,9 +333,19 @@ export const handleWebhook = (req: Request, res: Response) => {
     if (body.entry?.[0]?.changes?.[0]?.value?.messages) {
         const messageData = body.entry[0].changes[0].value.messages[0];
         const from: string = normalizeBrazilianPhone(messageData.from);
+        const messageType: string = messageData.type;
         const messageBody: string | undefined = messageData.text?.body;
 
-        console.log(`📩 Recebido de ${from}: "${messageBody}"`);
+        console.log(`📩 Recebido de ${from} [tipo: ${messageType}]`);
+
+        // Passo 16 — Resposta determinística para mídia não suportada
+        if (messageType !== 'text') {
+            whatsapp.sendText(
+                from,
+                'No momento consigo responder apenas mensagens de texto. Por favor, descreva sua dúvida por escrito. 😉'
+            ).catch(err => console.error('❌ Erro ao enviar resposta de mídia não suportada:', err));
+            return;
+        }
 
         if (messageBody) {
             // ✅ Step 4: Heavy processing is scheduled in the buffer,

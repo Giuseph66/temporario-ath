@@ -8,7 +8,6 @@ export const handleRespondiWebhook = async (req: Request, res: Response): Promis
         console.log('📋 [RespondiWebhook] Requisição recebida. Query params:', JSON.stringify({
             token: req.query.token ? '[PRESENTE]' : '[AUSENTE]',
         }));
-        console.log('📋 [RespondiWebhook] Payload bruto:', JSON.stringify(req.body));
         console.log('📋 [RespondiWebhook] Campos recebidos:', Object.keys(req.body || {}));
 
         // SECURITY: Verify the request comes from the configured Respondi instance
@@ -124,19 +123,19 @@ export const handleRespondiWebhook = async (req: Request, res: Response): Promis
             formData.lgpdConsent = true;
         }
 
-        console.log('✅ [RespondiWebhook] Dados extraídos:', { telefone: telefoneLimpo, ...formData });
+        console.log('✅ [RespondiWebhook] Dados extraídos. Telefone:', telefoneLimpo.slice(0, 4) + '****', '| Campos:', Object.keys(formData).filter(k => formData[k] !== null).join(', '));
 
         // Smart lookup: try the normalized 13-digit phone first, then
         // the 12-digit variant (without the 9) to catch old records
         // created before the phone normalizer was introduced.
-        let existingUser = await prisma.user.findUnique({
+        let existingUser = await prisma.user.findFirst({
             where: { phoneNumber: telefoneLimpo },
         });
 
         if (!existingUser && telefoneLimpo.length === 13) {
             // Build the 12-digit variant: 55 + DDD + 8-digit number (remove the 9)
             const without9 = telefoneLimpo.slice(0, 4) + telefoneLimpo.slice(5);
-            existingUser = await prisma.user.findUnique({
+            existingUser = await prisma.user.findFirst({
                 where: { phoneNumber: without9 },
             });
             if (existingUser) {

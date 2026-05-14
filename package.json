@@ -6,7 +6,11 @@
     "scripts": {
         "start": "node dist/index.js",
         "dev": "nodemon src/index.ts",
-        "build": "tsc"
+        "build": "tsc",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage",
+        "seed": "ts-node prisma/seed.ts"
     },
     "keywords": [],
     "author": "",
@@ -15,20 +19,26 @@
         "@google/generative-ai": "^0.24.1",
         "@prisma/client": "5.19.1",
         "axios": "^1.13.5",
+        "bcrypt": "^6.0.0",
         "body-parser": "^1.20.4",
         "dotenv": "^16.6.1",
         "express": "^4.22.1",
         "googleapis": "^171.4.0",
+        "jsonwebtoken": "^9.0.3",
         "libphonenumber-js": "^1.12.37",
         "p-queue": "^9.1.0",
         "prisma": "5.19.1"
     },
     "devDependencies": {
+        "@types/bcrypt": "^6.0.0",
         "@types/body-parser": "^1.19.6",
         "@types/express": "^4.17.25",
+        "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^20.11.24",
+        "@vitest/coverage-v8": "^4.1.6",
         "nodemon": "^3.1.0",
         "ts-node": "^10.9.2",
-        "typescript": "^5.3.3"
+        "typescript": "^5.3.3",
+        "vitest": "^4.1.6"
     }
 }

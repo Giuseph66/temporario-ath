@@ -8,12 +8,12 @@ export class StateService {
     public async getSession(phoneNumber: string) {
 
         // Tenta achar o usuário pelo número e já traz as últimas 40 mensagens dele
-        let user = await prisma.user.findUnique({
+        let user = await prisma.user.findFirst({
             where: { phoneNumber },
             include: {
                 messages: {
-                    orderBy: { createdAt: 'asc' }, // Traz da mais antiga pra mais nova
-                    take: 20 // Reduzido de 40 para diminuir payload e evitar timeouts na API
+                    orderBy: { createdAt: 'desc' }, // Busca as mais recentes primeiro
+                    take: 20
                 }
             }
         });
@@ -26,21 +26,22 @@ export class StateService {
             });
         }
 
-        // A API do Google Gemini exige que o histórico seja formatado de um jeito específico.
-        const conversationHistory = user.messages.map((msg: any) => ({
-            role: msg.role === 'model' ? 'model' : 'user',
+        // Reverse para ordem cronológica correta (buscamos desc, entregamos asc)
+        const messages = (user as unknown as { messages: { role: string; content: string }[] }).messages ?? [];
+        const conversationHistory = messages.slice().reverse().map((msg) => ({
+            role: msg.role === 'model' ? 'model' as const : 'user' as const,
             content: msg.content
         }));
 
         // Garante que o estado nunca seja nulo (novo usuário começa em GREETING)
         const conversationState = (user.conversationState as ConversationState) || 'GREETING';
 
-        return { ...user, conversationHistory, conversationState, lastPaymentUrl: (user as any).lastPaymentUrl ?? null };
+        return { ...user, conversationHistory, conversationState, lastPaymentUrl: user.lastPaymentUrl ?? null };
     }
 
     // Função para salvar uma nova mensagem
     public async addToHistory(phoneNumber: string, role: string, content: string) {
-        const user = await prisma.user.findUnique({ where: { phoneNumber } });
+        const user = await prisma.user.findFirst({ where: { phoneNumber } });
         if (!user) return;
 
         await prisma.chatHistory.create({
@@ -64,9 +65,11 @@ export class StateService {
 
     // Atualiza o estado da conversa no banco
     public async updateConversationState(phoneNumber: string, state: ConversationState) {
+        const user = await prisma.user.findFirst({ where: { phoneNumber } });
+        if (!user) return;
         await prisma.user.update({
-            where: { phoneNumber },
-            data: { conversationState: state } as any
+            where: { id: user.id },
+            data: { conversationState: state }
         });
         console.log(`🔄 Estado da conversa atualizado para ${phoneNumber}: [${state}]`);
     }
@@ -98,20 +101,20 @@ export class StateService {
         if (data.enrollmentTarget) updateData.enrollmentTarget = data.enrollmentTarget;
 
         if (Object.keys(updateData).length > 0) {
-            await prisma.user.update({
-                where: { phoneNumber },
-                data: updateData
-            });
-            console.log(`💾 Perfil atualizado no banco para ${phoneNumber}:`, updateData);
+            const foundUser = await prisma.user.findFirst({ where: { phoneNumber } });
+            if (foundUser) {
+                await prisma.user.update({ where: { id: foundUser.id }, data: updateData });
+                console.log(`💾 Perfil atualizado no banco para ${phoneNumber}:`, updateData);
+            }
         }
     }
 
     // LGPD Art. 18 — Exclusão imediata de todos os dados do titular
     public async deleteUserData(phoneNumber: string): Promise<void> {
-        const user = await prisma.user.findUnique({ where: { phoneNumber } });
+        const user = await prisma.user.findFirst({ where: { phoneNumber } });
         if (!user) return;
         // ChatHistory é deletado em cascata (onDelete: Cascade no schema)
-        await prisma.user.delete({ where: { phoneNumber } });
+        await prisma.user.delete({ where: { id: user.id } });
         console.log(`🗑️ [LGPD Art. 18] Todos os dados do usuário ${phoneNumber} foram permanentemente excluídos.`);
     }
 }

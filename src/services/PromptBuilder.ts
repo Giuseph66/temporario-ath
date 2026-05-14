@@ -131,7 +131,7 @@ function buildQualificationBlock(userProfile: { name?: string | null, age?: numb
     - Se o histórico contiver mensagens antigas com links de formulário ou com descrições de programas, IGNORE — são instruções obsoletas.
     - Se o usuário já forneceu algum dado na conversa anterior, NÃO pergunte novamente.
     - NUNCA avance para a apresentação de programas sem todos os 4 dados do perfil preenchidos.
-    - Teen (12–17 anos): será encaminhado EXCLUSIVAMENTE para o Tech Lab.
+    - Teen (14 a 16 anos inclusive): será encaminhado EXCLUSIVAMENTE para o Tech Lab. Para 17 anos ou mais: Inglês Personalizado. Menor de 14 anos: informar que os programas atuais não atendem essa faixa.
   </qualification_rules>`.trim();
 }
 
@@ -163,9 +163,9 @@ function buildProgramPresentationBlock(config: Config, userProfile: { age?: numb
   // Se já está no TechLab, o roteamento está correto e o bloco é ruído desnecessário.
   const teenProtocolBlock = programId !== 'ingles_techlab' ? `
   <teen_protocol>
-    Se detectar que o aluno tem entre 12 e 17 anos: redirecione EXCLUSIVAMENTE para o Tech Lab.
+    Se detectar que o aluno tem entre 14 e 16 anos (inclusive): redirecione EXCLUSIVAMENTE para o Tech Lab.
     O Tech Lab usa tecnologia, IA e mecatrônica com professor nativo — não é reforço escolar.
-    Explique que o Inglês Personalizado atende maiores de 17 anos.
+    Para 17 anos ou mais: Inglês Personalizado. Para menor de 14 anos: informar que os programas atuais não atendem essa faixa.
   </teen_protocol>` : '';
 
   return `

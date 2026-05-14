@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, Tool, FunctionDeclaration, SchemaType } from "@google/generative-ai";
+import { GoogleGenerativeAI, FunctionDeclaration, SchemaType, Tool } from "@google/generative-ai";
 import dotenv from "dotenv";
 import { calendarService } from "./CalendarService";
 import { asaasService } from "./AsaasService";
@@ -169,17 +169,24 @@ const cancelAsaasPaymentDecl: FunctionDeclaration = {
     }
 };
 
-const ALL_TOOLS: Tool[] = [{
-    functionDeclarations: [checkAvailabilityDecl, createAppointmentDecl, findAppointmentsDecl, cancelAppointmentDecl, generatePaymentDecl, cancelAsaasPaymentDecl]
-}];
-
 export class AIService {
-    private genAI: GoogleGenerativeAI;
+    // Resolve chave Gemini: banco do tenant > env > erro
+    private async resolveApiKey(tenantId?: string): Promise<string> {
+        if (tenantId) {
+            const tenant = await prisma.tenant.findUnique({
+                where: { id: tenantId },
+                select: { geminiApiKey: true },
+            });
+            if (tenant?.geminiApiKey) return tenant.geminiApiKey;
+        }
+        const envKey = process.env.GEMINI_API_KEY;
+        if (envKey) return envKey;
+        throw new Error('Chave Gemini não configurada. Defina GEMINI_API_KEY no .env ou configure a chave do tenant no banco.');
+    }
 
-    constructor() {
-        const apiKey = process.env.GEMINI_API_KEY || "";
-        if (!apiKey) console.error("❌ ERRO CRÍTICO: Chave GEMINI_API_KEY ausente.");
-        this.genAI = new GoogleGenerativeAI(apiKey);
+    private async getGenAI(tenantId?: string): Promise<GoogleGenerativeAI> {
+        const apiKey = await this.resolveApiKey(tenantId);
+        return new GoogleGenerativeAI(apiKey);
     }
 
     private isModelReasoning(text: string): boolean {
@@ -253,17 +260,15 @@ export class AIService {
 
             } else if (name === "generate_payment") {
                 const paymentType = args.paymentType || 'monthly';
-                console.log(`💳 Artemis chamou generate_payment: ${args.customerName} | CPF: ${args.cpf} | R$${args.amount} | tipo: ${paymentType}`);
+                console.log(`💳 Artemis chamou generate_payment: R$${args.amount} | tipo: ${paymentType}`);
 
                 // 1. Busca o usuário no banco pelo telefone
-                const dbUser = await prisma.user.findUnique({
-                    where: { phoneNumber: userPhone }
-                });
+                const dbUser = await prisma.user.findFirst({ where: { phoneNumber: userPhone } });
 
                 let asaasCustomerId = dbUser?.asaasCustomerId ?? null;
 
                 // 2. Se não tiver ID Asaas salvo, busca/cria o cliente e salva no banco
-                if (!asaasCustomerId) {
+                if (!asaasCustomerId && dbUser) {
                     asaasCustomerId = await asaasService.getOrCreateCustomer(
                         args.customerName,
                         args.cpf,
@@ -271,14 +276,14 @@ export class AIService {
                     );
 
                     await prisma.user.update({
-                        where: { phoneNumber: userPhone },
+                        where: { id: dbUser.id },
                         data: {
                             asaasCustomerId: asaasCustomerId,
                             cpf: args.cpf.replace(/\D/g, '') // Salva só os dígitos
                         }
                     });
-                    console.log(`💾 asaasCustomerId e CPF salvos no banco para ${userPhone}`);
-                } else {
+                    console.log(`💾 asaasCustomerId e CPF salvos no banco.`);
+                } else if (asaasCustomerId) {
                     console.log(`♻️  Usando asaasCustomerId já salvo: ${asaasCustomerId}`);
                 }
 
@@ -302,6 +307,10 @@ export class AIService {
                 finalAmount = Math.round(finalAmount * 100) / 100;
 
                 // 4. Gera o link de cobrança (assinatura ou avulso)
+                if (!asaasCustomerId) {
+                    toolResult = { error: 'Cliente Asaas não encontrado. Tente novamente.' };
+                    return { result: toolResult };
+                }
                 const invoiceUrl = await asaasService.generatePaymentLink(
                     asaasCustomerId,
                     finalAmount,
@@ -313,10 +322,12 @@ export class AIService {
                 capturedPaymentUrl = invoiceUrl;
 
                 // Persist the real URL to the DB so it can be recalled without history
-                await prisma.user.update({
-                    where: { phoneNumber: userPhone },
-                    data: { lastPaymentUrl: invoiceUrl } as any
-                });
+                if (dbUser) {
+                    await prisma.user.update({
+                        where: { id: dbUser.id },
+                        data: { lastPaymentUrl: invoiceUrl }
+                    });
+                }
 
                 // NOTE: WhatsApp Business API requires 24h messaging window — Dayana
                 // enrollment notifications disabled for now. Payment confirmation
@@ -332,7 +343,7 @@ export class AIService {
 
             } else if (name === "cancel_asaas_payment") {
                 console.log(`🚫 Artemis chamou cancel_asaas_payment para ${userPhone}`);
-                const dbUser = await prisma.user.findUnique({ where: { phoneNumber: userPhone } });
+                const dbUser = await prisma.user.findFirst({ where: { phoneNumber: userPhone } });
                 if (!dbUser?.asaasCustomerId) {
                     toolResult = { success: false, message: 'Nenhuma cobrança encontrada para este usuário.' };
                 } else {
@@ -365,8 +376,10 @@ export class AIService {
      *
      * @param userPhone - Número de telefone do usuário (ex: "5565999999999") — usado para buscar/salvar o ID Asaas no banco.
      */
-    async generateResponse(userPhone: string, history: any[], message: string, systemInstruction: string, state: string = 'GREETING'): Promise<{ text: string; paymentUrl?: string }> {
+    async generateResponse(userPhone: string, history: any[], message: string, systemInstruction: string, state: string = 'GREETING', tenantId?: string): Promise<{ text: string; paymentUrl?: string }> {
         try {
+            const genAI = await this.getGenAI(tenantId);
+
             // Filter tools based on current conversation state
             const activeToolDecls: FunctionDeclaration[] = [];
             if (['PROGRAM_PRESENTATION', 'OBJECTION_HANDLING', 'CLOSING'].includes(state)) {
@@ -384,7 +397,7 @@ export class AIService {
             const timeoutMs = TOOL_STATES.includes(state) ? 60_000 : 45_000;
 
             // O modelo é instanciado por chamada, com a instrução de sistema correta
-            const model = this.genAI.getGenerativeModel({
+            const model = genAI.getGenerativeModel({
                 model: "gemini-3.1-pro-preview",
                 systemInstruction: systemInstruction,
                 tools: toolsToPass,
@@ -585,9 +598,10 @@ export class AIService {
      * Extrai dados de perfil do histórico da conversa.
      * Usa um modelo separado, focado em retornar JSON puro.
      */
-    async extractProfileData(history: any[]): Promise<any> {
+    async extractProfileData(history: any[], tenantId?: string): Promise<any> {
         try {
-            const jsonModel = this.genAI.getGenerativeModel({
+            const genAI = await this.getGenAI(tenantId);
+            const jsonModel = genAI.getGenerativeModel({
                 model: "gemini-2.5-flash",
                 generationConfig: { responseMimeType: "application/json" }
             }, { timeout: 30_000 });

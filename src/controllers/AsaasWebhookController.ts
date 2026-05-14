@@ -4,17 +4,23 @@ import { WhatsAppService } from '../services/WhatsAppService';
 
 const whatsapp = new WhatsAppService();
 
-/**
- * AsaasWebhookController
- *
- * Recebe notificações de eventos do Asaas (pagamentos confirmados, recebidos etc.)
- * e dispara uma mensagem proativa de confirmação para o aluno via WhatsApp.
- *
- * IMPORTANTE: O status 200 é enviado IMEDIATAMENTE antes de qualquer processamento
- * para evitar que o Asaas reenvia o evento por timeout.
- */
 export const handleAsaasWebhook = async (req: Request, res: Response): Promise<void> => {
-    // ✅ Retorno imediato — impede retentativas do Asaas
+    // Passo 06 — Validar token do webhook antes de qualquer processamento
+    const receivedToken = req.headers['asaas-access-token'] as string | undefined;
+    const expectedToken = process.env.ASAAS_WEBHOOK_SECRET;
+
+    if (!expectedToken || receivedToken !== expectedToken) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+
+    // Passo 06 — Validação mínima do payload
+    if (!req.body?.event || !req.body?.payment?.id) {
+        res.status(400).json({ error: 'Invalid payload' });
+        return;
+    }
+
+    // ✅ Retorno imediato após validação — impede retentativas do Asaas
     res.sendStatus(200);
 
     try {
@@ -22,11 +28,19 @@ export const handleAsaasWebhook = async (req: Request, res: Response): Promise<v
 
         console.log(`🔔 [AsaasWebhook] Evento recebido: ${event}`);
 
-        // Só processa eventos de pagamento confirmado ou recebido
         if (event !== 'PAYMENT_RECEIVED' && event !== 'PAYMENT_CONFIRMED') {
             console.log(`ℹ️  [AsaasWebhook] Evento ignorado: ${event}`);
             return;
         }
+
+        // Passo 07 — Idempotência: ignorar se já processado
+        const paymentId: string = payment.id;
+        const already = await prisma.processedEvent.findUnique({ where: { id: paymentId } });
+        if (already) {
+            console.log(`♻️  [AsaasWebhook] Evento ${paymentId} já processado. Ignorando.`);
+            return;
+        }
+        await prisma.processedEvent.create({ data: { id: paymentId } });
 
         const asaasCustomerId: string = payment?.customer;
         const valueRaw: number = payment?.value ?? 0;
@@ -36,7 +50,6 @@ export const handleAsaasWebhook = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        // Busca o usuário correspondente pelo ID do Asaas
         const user = await prisma.user.findFirst({
             where: { asaasCustomerId }
         });
@@ -46,7 +59,15 @@ export const handleAsaasWebhook = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        // Formata o valor para exibição (ex: 497 → "R$ 497,00")
+        // Passo 19 — Atualizar status de matrícula no banco
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                enrollmentStatus: 'ENROLLED',
+                enrollmentDate: new Date(),
+            }
+        });
+
         const valueFormatted = valueRaw.toLocaleString('pt-BR', {
             style: 'currency',
             currency: 'BRL'
@@ -61,7 +82,7 @@ export const handleAsaasWebhook = async (req: Request, res: Response): Promise<v
             `Seja muito bem-vindo(a)! 🚀`;
 
         await whatsapp.sendText(user.phoneNumber, confirmationMessage);
-        console.log(`📲 [AsaasWebhook] Confirmação enviada para ${user.phoneNumber}`);
+        console.log(`📲 [AsaasWebhook] Confirmação enviada. Status atualizado para ENROLLED.`);
 
     } catch (error) {
         console.error('❌ [AsaasWebhook] Erro ao processar evento:', error);

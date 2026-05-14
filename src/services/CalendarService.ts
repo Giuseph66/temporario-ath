@@ -2,7 +2,12 @@ import { google } from 'googleapis';
 import path from 'path';
 
 const CREDENTIALS_PATH = path.join(process.cwd(), 'config', 'google-credentials.json');
-const CALENDAR_ID = 'pietro.m.conte@gmail.com';
+
+function getCalendarId(): string {
+    const id = process.env.GOOGLE_CALENDAR_ID;
+    if (!id) throw new Error('GOOGLE_CALENDAR_ID não está definido nas variáveis de ambiente.');
+    return id;
+}
 
 export class CalendarService {
     private calendar;
@@ -23,10 +28,10 @@ export class CalendarService {
                     timeMin: new Date(timeMin).toISOString(),
                     timeMax: new Date(timeMax).toISOString(),
                     timeZone: 'America/Cuiaba',
-                    items: [{ id: CALENDAR_ID }]
+                    items: [{ id: getCalendarId() }]
                 }
             });
-            const busySlots = response.data.calendars?.[CALENDAR_ID]?.busy || [];
+            const busySlots = response.data.calendars?.[getCalendarId()]?.busy || [];
             return busySlots;
         } catch (error) {
             console.error('Error checking calendar:', error);
@@ -54,7 +59,7 @@ export class CalendarService {
             }
 
             const response = await this.calendar.events.insert({
-                calendarId: CALENDAR_ID,
+                calendarId: getCalendarId(),
                 requestBody: event,
             });
             return response.data.htmlLink;
@@ -72,7 +77,7 @@ export class CalendarService {
     async findAppointments(query: string, timeMin: string, timeMax: string) {
         try {
             const response = await this.calendar.events.list({
-                calendarId: CALENDAR_ID,
+                calendarId: getCalendarId(),
                 timeMin: new Date(timeMin).toISOString(),
                 timeMax: new Date(timeMax).toISOString(),
                 q: query || undefined,
@@ -103,7 +108,7 @@ export class CalendarService {
     async cancelAppointment(eventId: string) {
         try {
             await this.calendar.events.delete({
-                calendarId: CALENDAR_ID,
+                calendarId: getCalendarId(),
                 eventId,
             });
             console.log(`🗑️  [CalendarService] Evento ${eventId} removido.`);
