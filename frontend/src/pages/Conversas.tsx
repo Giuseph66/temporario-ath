@@ -282,14 +282,15 @@ export function Conversas() {
     const { data: list = [], isLoading: listLoading } = useQuery<ConversaItem[]>({
         queryKey: ['conversations'],
         queryFn: () => axios.get('/api/conversations').then(r => r.data),
-        refetchInterval: 5000,
+        refetchInterval: 3000,
     });
 
     const { data: detail } = useQuery<LeadDetail>({
         queryKey: ['lead-detail', selectedId],
         queryFn: () => axios.get(`/api/leads/${selectedId}`).then(r => r.data),
         enabled: !!selectedId,
-        refetchInterval: 4000,
+        refetchInterval: 2000,
+        staleTime: 0,
     });
 
     const sendMsg = useMutation({
@@ -465,7 +466,22 @@ export function Conversas() {
                                     <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'var(--ink-5)' }}>{detail.interactionCount} msgs</span>
                                 </div>
                             </div>
-                            <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: 'var(--ink-4)' }}>{detail.phoneNumber}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: 'var(--ink-4)' }}>{detail.phoneNumber}</div>
+                                <button
+                                    onClick={async () => {
+                                        if (!confirm('Iniciar nova sessão? O agente vai cumprimentar como novo contato, mas o histórico é mantido.')) return;
+                                        await axios.post(`/api/leads/${selectedId}/clear-session`);
+                                        qc.invalidateQueries({ queryKey: ['lead-detail', selectedId] });
+                                        qc.invalidateQueries({ queryKey: ['conversations'] });
+                                    }}
+                                    title="Iniciar nova sessão"
+                                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 6, fontSize: 11, fontWeight: 500, border: '1px solid var(--line-2)', background: 'var(--paper-2)', color: 'var(--ink-4)', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                                >
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                    Nova sessão
+                                </button>
+                            </div>
                         </div>
 
                         {/* Messages */}
@@ -476,6 +492,18 @@ export function Conversas() {
                                 }
 
                                 const msg = item.msg;
+
+                                // Marcador de nova sessão
+                                if (msg.role === 'system') {
+                                    return (
+                                        <div key={msg.id} style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0' }}>
+                                            <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+                                            <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'var(--ink-5)', whiteSpace: 'nowrap' }}>{msg.content}</span>
+                                            <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+                                        </div>
+                                    );
+                                }
+
                                 const isAgent = msg.role === 'model';
                                 const isOperator = msg.role === 'operator';
                                 const isRight = isAgent || isOperator;

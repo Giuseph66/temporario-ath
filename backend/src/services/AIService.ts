@@ -202,15 +202,15 @@ export class AIService {
         ];
         if (reasoningPatterns.some(p => p.test(trimmed))) return true;
         
-        // Detect predominantly English text (>60% ASCII letters in a Portuguese bot)
-        // This catches cases where the model switches to English for internal reasoning
+        // Detecta texto predominantemente inglês (>85% palavras ASCII puras)
+        // Threshold alto para não matar respostas com nomes de programas em inglês
         const words = trimmed.split(/\s+/);
-        if (words.length > 5) {
+        if (words.length > 10) {
             const asciiWordPattern = /^[a-zA-Z']+$/;
             const asciiWords = words.filter(w => asciiWordPattern.test(w)).length;
-            if (asciiWords / words.length > 0.7) return true;
+            if (asciiWords / words.length > 0.85) return true;
         }
-        
+
         return false;
     }
 
@@ -554,7 +554,9 @@ export class AIService {
             }
 
             if (!responseText.trim()) {
-                console.warn('⚠️ Gemini retornou resposta vazia após pre-processamento e tool calls. Tentando novamente...');
+                const finishReason = result.response.candidates?.[0]?.finishReason ?? 'unknown';
+                const allParts = result.response.candidates?.[0]?.content?.parts ?? [];
+                console.warn(`⚠️ Gemini resposta vazia | finishReason=${finishReason} | parts=${allParts.length} | texts=${allParts.filter((p: any) => p.text).length}`);
                 try {
                     const retryResult = await chat.sendMessage(
                         'A resposta não conteve texto válido ou foi apenas texto de raciocínio interno. Responda ao usuário em Português agora repassando os dados do agendamento ou pagamento.'

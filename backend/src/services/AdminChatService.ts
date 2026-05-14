@@ -82,17 +82,24 @@ function timeAgo(date: Date): string {
 export async function handleAdminMessage(tenantId: string, message: string, history: Array<{ role: 'user' | 'model'; content: string }>): Promise<string> {
     try {
         const apiKey = await resolveGeminiKey(tenantId);
-        const agent = await prisma.agent.findFirst({ where: { tenantId }, select: { geminiModel: true } });
-        const model = agent?.geminiModel ?? 'gemini-2.5-flash-preview-05-20';
+        // Usa modelo fixo para admin (gemini-2.5-flash, sem preview)
+        const MODEL = 'gemini-2.5-flash';
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const systemInstruction = await buildSystemContext(tenantId);
 
-        const chat = genAI.getGenerativeModel({ model, systemInstruction }).startChat({
-            history: history.slice(-10).map(h => ({
-                role: h.role,
-                parts: [{ text: h.content }],
-            })),
+        // Gemini exige que history comece com role='user', nunca 'model'
+        // Filtra os últimos N turnos e garante que o primeiro seja 'user'
+        const rawHistory = history.slice(-10).map(h => ({
+            role: h.role as 'user' | 'model',
+            parts: [{ text: h.content }],
+        }));
+        // Descarta mensagens iniciais de 'model' até encontrar primeiro 'user'
+        const firstUserIdx = rawHistory.findIndex(h => h.role === 'user');
+        const cleanHistory = firstUserIdx >= 0 ? rawHistory.slice(firstUserIdx) : [];
+
+        const chat = genAI.getGenerativeModel({ model: MODEL, systemInstruction }).startChat({
+            history: cleanHistory,
         });
 
         const result = await chat.sendMessage(message);

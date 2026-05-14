@@ -130,6 +130,23 @@ export async function deleteLead(req: AuthRequest, res: Response): Promise<Respo
     return res.json({ ok: true });
 }
 
+export async function clearSession(req: AuthRequest, res: Response): Promise<Response> {
+    const lead = await prisma.user.findFirst({ where: { id: req.params.id, tenantId: req.tenantId } });
+    if (!lead) return res.status(404).json({ error: 'Lead não encontrado' });
+
+    await prisma.user.update({
+        where: { id: lead.id },
+        data: { conversationState: 'GREETING' },
+    });
+
+    // Marca no histórico que uma nova sessão foi iniciada (contexto visual)
+    await prisma.chatHistory.create({
+        data: { userId: lead.id, role: 'system', content: '— Nova sessão iniciada pelo operador —' },
+    });
+
+    return res.json({ ok: true });
+}
+
 export async function backfillNames(req: AuthRequest, res: Response): Promise<Response> {
     // Busca todos os leads (não só os sem nome) pra aplicar customName com prioridade
     const leads = await prisma.user.findMany({

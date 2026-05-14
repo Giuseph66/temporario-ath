@@ -94,7 +94,7 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
             return;
         }
 
-        const agent = await prisma.agent.findFirst({ where: { tenantId: tenant.id }, select: { id: true, settingsJson: true } }).catch(() => null);
+        const agent = await prisma.agent.findFirst({ where: { tenantId: tenant.id }, select: { id: true, settingsJson: true, isActive: true } }).catch(() => null);
 
         // ── SALVA MENSAGEM SEMPRE (antes de qualquer filtro) ─────────────────
         // Garante que o lead e a mensagem existam no banco independente de
@@ -140,6 +140,12 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
             role,
             chars: messageText.length,
         });
+
+        // ── BOT INATIVO: salva mensagem mas nunca responde ────────────────────
+        if (agent && !agent.isActive) {
+            log.webhook('info', 'Bot inativo — mensagem salva, sem resposta', { tenant: tenant.slug });
+            return;
+        }
 
         // ── SELF-MESSAGE: detecta quando o operador fala consigo mesmo ────────
         if (data?.key?.fromMe) {

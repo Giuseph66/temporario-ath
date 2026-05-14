@@ -2,6 +2,27 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
+type Program = {
+    id: string;
+    name: string;
+    price_value: number;
+    price_type: 'monthly' | 'per_session';
+    installments: number;
+    duration_weeks: number;
+    verbatim_intro: string;
+    full_text: string;
+};
+
+const EMPTY_PROGRAM: Omit<Program, 'id'> = {
+    name: '',
+    price_value: 0,
+    price_type: 'monthly',
+    installments: 6,
+    duration_weeks: 24,
+    verbatim_intro: 'Vou te enviar o informativo que responde às principais dúvidas. No final, me diz se encaixa no que você está procurando, ok?',
+    full_text: '',
+};
+
 type AgentData = {
     id: string;
     name: string;
@@ -9,7 +30,7 @@ type AgentData = {
     whatsappNumber: string | null;
     geminiModel: string;
     personaJson: { name: string; role: string; [k: string]: unknown };
-    programsJson: { programs: { id: string; name: string; price: number; installments?: number }[] };
+    programsJson: { programs: Program[] };
     settingsJson: Record<string, unknown>;
 };
 
@@ -237,9 +258,9 @@ export function Agente() {
     const [restrictions, setRestrictions] = useState('');
 
     // Programs state
-    const [programs, setPrograms] = useState<AgentData['programsJson']['programs']>([]);
-    const [newProgName, setNewProgName] = useState('');
-    const [newProgPrice, setNewProgPrice] = useState('');
+    const [programs, setPrograms] = useState<Program[]>([]);
+    const [editingProg, setEditingProg] = useState<Program | null>(null);
+    const [isNewProg, setIsNewProg] = useState(false);
 
     useEffect(() => {
         if (!agent) return;
@@ -316,18 +337,13 @@ export function Agente() {
         onSuccess: () => qc.invalidateQueries({ queryKey: ['agent'] }),
     });
 
-    function addProgram() {
-        if (!newProgName.trim() || !newProgPrice) return;
-        const next = [...programs, {
-            id: `prog_${Date.now()}`,
-            name: newProgName.trim(),
-            price: parseFloat(newProgPrice),
-            installments: 1,
-        }];
+    function saveProgram(prog: Program) {
+        const exists = programs.find(p => p.id === prog.id);
+        const next = exists ? programs.map(p => p.id === prog.id ? prog : p) : [...programs, prog];
         setPrograms(next);
         updatePrograms.mutate(next);
-        setNewProgName('');
-        setNewProgPrice('');
+        setEditingProg(null);
+        setIsNewProg(false);
     }
 
     function removeProgram(id: string) {
@@ -498,85 +514,106 @@ export function Agente() {
 
                 {/* Programas */}
                 <div style={{ marginBottom: 40 }}>
-                    <SectionLabel>Programas</SectionLabel>
-                    <div style={{ marginBottom: 16 }}>
-                        {programs.length === 0 && (
-                            <div style={{ fontSize: 13, color: 'var(--ink-4)', padding: '12px 0' }}>
-                                Nenhum programa cadastrado.
-                            </div>
-                        )}
-                        {programs.map(p => (
-                            <div key={p.id} style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                padding: '12px 0', borderBottom: '1px solid var(--line)',
-                            }}>
-                                <div>
-                                    <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink-1)', marginBottom: 2 }}>
-                                        {p.name}
-                                    </div>
-                                    <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: 'var(--ink-4)' }}>
-                                        R$ {(p.price ?? 0).toFixed(2)} · {p.installments ?? 1}x
-                                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                        <SectionLabel>Programas</SectionLabel>
+                        <button onClick={() => { setIsNewProg(true); setEditingProg({ id: `prog_${Date.now()}`, ...EMPTY_PROGRAM }); }}
+                            style={{ padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 500, border: '1px solid var(--accent-ink)', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                            + Novo programa
+                        </button>
+                    </div>
+
+                    {programs.length === 0 && (
+                        <div style={{ fontSize: 13, color: 'var(--ink-4)', padding: '12px 0' }}>Nenhum programa cadastrado.</div>
+                    )}
+
+                    {programs.map(p => (
+                        <div key={p.id} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid var(--line)', gap: 12 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 3 }}>{p.name}</div>
+                                <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: 'var(--ink-4)', marginBottom: 4 }}>
+                                    R$ {(p.price_value ?? 0).toFixed(2)} · {p.installments ?? 1}x · {p.price_type === 'monthly' ? 'mensal' : 'por sessão'}
                                 </div>
-                                <button
-                                    onClick={() => removeProgram(p.id)}
-                                    style={{
-                                        padding: '4px 10px', borderRadius: 6, fontSize: 11,
-                                        border: '1px solid var(--danger)', background: 'transparent',
-                                        color: 'var(--danger)', cursor: 'pointer', fontFamily: 'inherit',
-                                    }}
-                                >
+                                {p.full_text && (
+                                    <div style={{ fontSize: 11.5, color: 'var(--ink-4)', lineHeight: 1.4, maxHeight: 36, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {p.full_text.slice(0, 100)}…
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                                <button onClick={() => { setIsNewProg(false); setEditingProg({ ...p }); }}
+                                    style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-3)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                    Editar
+                                </button>
+                                <button onClick={() => removeProgram(p.id)}
+                                    style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontFamily: 'inherit' }}>
                                     Remover
                                 </button>
                             </div>
-                        ))}
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                        <div style={{ flex: 2 }}>
-                            <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: .8, textTransform: 'uppercase', color: 'var(--ink-5)', display: 'block', marginBottom: 4 }}>
-                                Nome do programa
-                            </label>
-                            <input
-                                value={newProgName}
-                                onChange={e => setNewProgName(e.target.value)}
-                                placeholder="Ex: Inglês para Adultos"
-                                onKeyDown={e => e.key === 'Enter' && addProgram()}
-                                style={{
-                                    width: '100%', padding: '8px 12px', borderRadius: 7, fontSize: 13,
-                                    border: '1px solid var(--line-2)', background: 'var(--paper-2)',
-                                    color: 'var(--ink-1)', fontFamily: 'inherit', outline: 'none',
-                                }}
-                            />
                         </div>
-                        <div style={{ flex: 1 }}>
-                            <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: .8, textTransform: 'uppercase', color: 'var(--ink-5)', display: 'block', marginBottom: 4 }}>
-                                Preço (R$)
-                            </label>
-                            <input
-                                value={newProgPrice}
-                                onChange={e => setNewProgPrice(e.target.value)}
-                                type="number" placeholder="199.90"
-                                onKeyDown={e => e.key === 'Enter' && addProgram()}
-                                style={{
-                                    width: '100%', padding: '8px 12px', borderRadius: 7, fontSize: 13,
-                                    border: '1px solid var(--line-2)', background: 'var(--paper-2)',
-                                    color: 'var(--ink-1)', fontFamily: 'inherit', outline: 'none',
-                                }}
-                            />
-                        </div>
-                        <button
-                            onClick={addProgram}
-                            disabled={!newProgName.trim() || !newProgPrice}
-                            style={{
-                                padding: '8px 16px', borderRadius: 7, fontSize: 12.5, fontWeight: 500,
-                                border: '1px solid var(--accent-ink)', background: 'var(--accent)',
-                                color: '#fff', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                                opacity: (!newProgName.trim() || !newProgPrice) ? .4 : 1,
-                            }}
-                        >
-                            + Adicionar
-                        </button>
-                    </div>
+                    ))}
+
+                    {/* Modal de edição */}
+                    {editingProg && (
+                        <>
+                            <div onClick={() => { setEditingProg(null); setIsNewProg(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.2)', zIndex: 40, backdropFilter: 'blur(2px)' }} />
+                            <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 620, maxHeight: '90vh', overflowY: 'auto', background: 'var(--paper)', borderRadius: 16, border: '1px solid var(--line)', boxShadow: '0 20px 60px rgba(0,0,0,.15)', zIndex: 50, padding: 32 }}>
+                                <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 24 }}>{isNewProg ? 'Novo programa' : 'Editar programa'}</div>
+
+                                {[
+                                    { label: 'ID (único, sem espaços)', key: 'id', type: 'text', disabled: !isNewProg },
+                                    { label: 'Nome do programa', key: 'name', type: 'text' },
+                                    { label: 'Preço (R$)', key: 'price_value', type: 'number' },
+                                    { label: 'Parcelas', key: 'installments', type: 'number' },
+                                    { label: 'Duração (semanas)', key: 'duration_weeks', type: 'number' },
+                                ].map(({ label, key, type, disabled }) => (
+                                    <div key={key} style={{ marginBottom: 14 }}>
+                                        <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: .8, textTransform: 'uppercase', color: 'var(--ink-5)', display: 'block', marginBottom: 4 }}>{label}</label>
+                                        <input
+                                            type={type} disabled={disabled}
+                                            value={(editingProg as any)[key] ?? ''}
+                                            onChange={e => setEditingProg(p => p ? { ...p, [key]: type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value } : p)}
+                                            style={{ width: '100%', padding: '8px 12px', borderRadius: 7, fontSize: 13, border: '1px solid var(--line-2)', background: disabled ? 'var(--paper-3)' : 'var(--paper-2)', color: 'var(--ink-1)', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', opacity: disabled ? 0.6 : 1 }}
+                                        />
+                                    </div>
+                                ))}
+
+                                <div style={{ marginBottom: 14 }}>
+                                    <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: .8, textTransform: 'uppercase', color: 'var(--ink-5)', display: 'block', marginBottom: 4 }}>Tipo de preço</label>
+                                    <select value={editingProg.price_type} onChange={e => setEditingProg(p => p ? { ...p, price_type: e.target.value as any } : p)}
+                                        style={{ width: '100%', padding: '8px 12px', borderRadius: 7, fontSize: 13, border: '1px solid var(--line-2)', background: 'var(--paper-2)', color: 'var(--ink-1)', fontFamily: 'inherit', outline: 'none' }}>
+                                        <option value="monthly">Mensal</option>
+                                        <option value="per_session">Por sessão</option>
+                                    </select>
+                                </div>
+
+                                <div style={{ marginBottom: 14 }}>
+                                    <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: .8, textTransform: 'uppercase', color: 'var(--ink-5)', display: 'block', marginBottom: 4 }}>Introdução (enviada antes do full_text)</label>
+                                    <textarea value={editingProg.verbatim_intro} onChange={e => setEditingProg(p => p ? { ...p, verbatim_intro: e.target.value } : p)} rows={2}
+                                        style={{ width: '100%', padding: '8px 12px', borderRadius: 7, fontSize: 13, border: '1px solid var(--line-2)', background: 'var(--paper-2)', color: 'var(--ink-1)', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
+                                </div>
+
+                                <div style={{ marginBottom: 24 }}>
+                                    <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: .8, textTransform: 'uppercase', color: 'var(--ink-5)', display: 'block', marginBottom: 4 }}>
+                                        Texto completo do programa (enviado ao lead — suporta *negrito*)
+                                    </label>
+                                    <textarea value={editingProg.full_text} onChange={e => setEditingProg(p => p ? { ...p, full_text: e.target.value } : p)} rows={12}
+                                        placeholder="*Nome do programa*&#10;&#10;Descrição detalhada..."
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: 7, fontSize: 12.5, border: '1px solid var(--line-2)', background: 'var(--paper-2)', color: 'var(--ink-1)', fontFamily: "'Geist Mono', monospace", outline: 'none', resize: 'vertical', lineHeight: 1.6, boxSizing: 'border-box' }} />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                                    <button onClick={() => { setEditingProg(null); setIsNewProg(false); }}
+                                        style={{ padding: '9px 18px', borderRadius: 8, fontSize: 13, border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-3)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                        Cancelar
+                                    </button>
+                                    <button onClick={() => saveProgram(editingProg)} disabled={!editingProg.name.trim() || !editingProg.full_text.trim()}
+                                        style={{ padding: '9px 18px', borderRadius: 8, fontSize: 13, fontWeight: 500, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', opacity: (!editingProg.name.trim() || !editingProg.full_text.trim()) ? 0.4 : 1 }}>
+                                        {isNewProg ? 'Criar programa' : 'Salvar alterações'}
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Base de Conhecimento (RAG) */}

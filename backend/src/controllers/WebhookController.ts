@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { stateService } from '../services/StateService';
 import { aiService } from '../services/AIService';
 import { buildSystemPrompt } from '../services/PromptBuilder';
-import { configLoader } from '../services/ConfigLoader';
+import { configLoader } from '../services/ConfigLoader'; // mantido só para compatibilidade com handleHumanHandoff legado
 import { WhatsAppService } from '../services/WhatsAppService';
 import { EvolutionService } from '../services/EvolutionService';
 import { resolveState } from '../flow/StateResolver';
@@ -72,6 +72,18 @@ export function scheduleProcessing(from: string, text: string, tenantId?: string
 // ─── HUMAN HANDOFF ───────────────────────────────────────────────────────────
 // Builds and sends the correct deterministic message for each handoff scenario.
 // Returns the text that was sent (so it can be saved to history).
+async function getProtocols(tenantId?: string): Promise<Record<string, string>> {
+    if (tenantId) {
+        const agent = await prisma.agent.findFirst({ where: { tenantId }, select: { personaJson: true } }).catch(() => null);
+        if (agent?.personaJson) {
+            const p = (agent.personaJson as Record<string, unknown>).protocols as Record<string, string> | undefined;
+            if (p && Object.keys(p).length > 0) return p;
+        }
+    }
+    // Fallback para arquivo enquanto DB não tiver os protocolos migrados
+    return configLoader.getConfig().persona.protocols as unknown as Record<string, string>;
+}
+
 async function handleHumanHandoff(
     from: string,
     handoffType: 'HOSTILE' | 'SOFT' | 'MENTAL_HEALTH' | 'DELETION',
@@ -79,8 +91,8 @@ async function handleHumanHandoff(
     userGoal: string | null | undefined,
     tenantId?: string,
 ): Promise<string> {
-    const protocols = configLoader.getConfig().persona.protocols as any;
-    const link: string = protocols.human_contact_link;
+    const protocols = await getProtocols(tenantId);
+    const link: string = protocols.human_contact_link ?? '';
     const program: string = userGoal || 'os programas da Confluence';
 
     let messageSent: string;
@@ -136,8 +148,32 @@ async function handleHumanHandoff(
 // calls happen here, long after the 200 OK has already been sent.
 async function processMessages(from: string, messageBody: string, tenantId?: string, agentId?: string, messageAlreadySaved = false): Promise<void> {
     try {
+        // ── 0. Guarda isActive — revalida no momento da execução (pode ter mudado durante debounce) ──
+        if (tenantId) {
+            const agent = await prisma.agent.findFirst({ where: { tenantId }, select: { isActive: true } });
+            if (agent && !agent.isActive) {
+                console.log(`🔴 Bot inativo — ignorando processamento para ${from.slice(0, 4)}****`);
+                return;
+            }
+        }
+
         // ── 1. Load the current session ───────────────────────────────────────
         let session = await stateService.getSession(from, tenantId, agentId);
+
+        // Auto-reset de sessão após 24h de inatividade
+        const hoursSinceLastInteraction = (Date.now() - new Date(session.lastInteraction).getTime()) / 3600000;
+        if (hoursSinceLastInteraction >= 24 && session.conversationState !== 'GREETING') {
+            await prisma.user.update({
+                where: { id: session.id },
+                data: { conversationState: 'GREETING' },
+            });
+            await prisma.chatHistory.create({
+                data: { userId: session.id, role: 'system', content: '— Nova sessão (inatividade > 24h) —' },
+            });
+            session = await stateService.getSession(from, tenantId, agentId);
+            console.log(`🔄 Auto-reset de sessão para ${from} (${Math.floor(hoursSinceLastInteraction)}h inativo)`);
+        }
+
         const previousState = session.conversationState;
         console.log(`📊 Usuário ${from} | Interação nº: ${session.interactionCount} | Estado atual: [${previousState}]`);
 
@@ -154,9 +190,9 @@ async function processMessages(from: string, messageBody: string, tenantId?: str
 
         if (!profileAlreadyComplete) {
             console.log('🕵️ Perfil incompleto — analisando conversa para extrair dados...');
-            // Re-fetch to include the message just saved
-            const updatedSession = await stateService.getSession(from);
-            const extractedData = await aiService.extractProfileData(updatedSession.conversationHistory);
+            // Re-fetch to include the message just saved — passa tenantId p/ não pegar ghost record
+            const updatedSession = await stateService.getSession(from, tenantId, agentId);
+            const extractedData = await aiService.extractProfileData(updatedSession.conversationHistory, tenantId);
             await stateService.updateUserProfile(from, extractedData);
             console.log('💾 Extração concluída.');
         } else {
@@ -164,23 +200,25 @@ async function processMessages(from: string, messageBody: string, tenantId?: str
         }
 
         // ── 4. Re-fetch session so resolveState sees the freshest profile ─────
-        session = await stateService.getSession(from);
+        session = await stateService.getSession(from, tenantId, agentId);
 
         // ── 5. Resolve the next state (with up-to-date profile data) ──────────
         const { state: nextState, handoffType } = resolveState(session, messageBody);
         console.log(`🔄 Estado resolvido: [${nextState}]${handoffType ? ` (${handoffType})` : ''}`);
 
-        // ── 5.5. LGPD consent — when user says "sim" during GREETING ────────
-        // The first "sim" the user sends while in GREETING is their LGPD consent.
-        if (previousState === 'GREETING' && !session.lgpdConsent) {
+        // ── 5.5. LGPD consent — detecta consentimento independente do estado ────
+        // Antes restrito a GREETING, mas o ghost-record bug causava estados errados.
+        // Agora detecta "sim" / "pode" sempre que lgpdConsent ainda for false.
+        if (!session.lgpdConsent) {
             const msgLower = messageBody.toLowerCase().trim();
-            const consentWords = ['sim', 'pode', 'claro', 'aceito', 'concordo', 'ok', 'tudo bem', 'pode sim', 'pode ser'];
+            const consentWords = ['sim', 'pode', 'claro', 'aceito', 'concordo', 'ok', 'tudo bem', 'pode sim', 'pode ser', 'vamos continuar', 'bora'];
             if (consentWords.some(w => msgLower.includes(w))) {
                 await prisma.user.update({
                     where: { id: session.id },
                     data: { lgpdConsent: true },
                 });
                 console.log(`✅ [LGPD] Consentimento registrado para ${from}`);
+                session = { ...session, lgpdConsent: true };
             }
         }
 
@@ -223,39 +261,33 @@ async function processMessages(from: string, messageBody: string, tenantId?: str
             return; // ← skip AI generation entirely
         }
 
-        // ── 8. Build the system prompt for the resolved state ─────────────────
-        const fileConfig = configLoader.getConfig();
-
-        // Merge: Agent.personaJson + Agent.programsJson from DB override the file config
-        // This makes edits in the Agente page actually affect the AI behavior
+        // ── 8. Build the system prompt — lê 100% do banco ────────────────────
+        const fileConfig = configLoader.getConfig(); // fallback para campos não migrados ainda
         let config = fileConfig;
-        if (session.tenantId) {
-            const dbAgent = await prisma.agent.findFirst({ where: { tenantId: session.tenantId } }).catch(() => null);
-            if (dbAgent) {
-                const dbPersona = dbAgent.personaJson as Record<string, unknown>;
-                const dbPrograms = (dbAgent.programsJson as { programs?: unknown[] })?.programs;
-                config = {
-                    ...fileConfig,
-                    persona: {
-                        ...fileConfig.persona,
-                        ...(dbPersona.name ? { name: String(dbPersona.name) } : {}),
-                        ...(dbPersona.role ? { role: String(dbPersona.role) } : {}),
-                        ...(dbPersona.language ? { language: String(dbPersona.language) } : {}),
-                        ...(dbPersona.absolute_restrictions ? { absolute_restrictions: dbPersona.absolute_restrictions as string[] } : {}),
-                        tone: {
-                            ...fileConfig.persona.tone,
-                            ...((dbPersona.tone as object | undefined) ?? {}),
-                        },
-                        protocols: {
-                            ...fileConfig.persona.protocols,
-                            ...((dbPersona.protocols as object | undefined) ?? {}),
-                        },
-                    },
-                    programs: dbPrograms?.length
-                        ? { programs: dbPrograms as any[] }
-                        : fileConfig.programs,
-                };
-            }
+
+        const dbAgent = session.tenantId
+            ? await prisma.agent.findFirst({ where: { tenantId: session.tenantId } }).catch(() => null)
+            : null;
+
+        if (dbAgent) {
+            const dbPersona = (dbAgent.personaJson as Record<string, unknown>) ?? {};
+            const dbPrograms = (dbAgent.programsJson as { programs?: unknown[] })?.programs ?? [];
+            const dbSettings = (dbAgent.settingsJson as Record<string, unknown>) ?? {};
+
+            config = {
+                persona: {
+                    name: String(dbPersona.name ?? fileConfig.persona.name),
+                    role: String(dbPersona.role ?? fileConfig.persona.role),
+                    language: String(dbPersona.language ?? fileConfig.persona.language ?? 'pt-BR'),
+                    absolute_restrictions: (dbPersona.absolute_restrictions as string[]) ?? fileConfig.persona.absolute_restrictions ?? [],
+                    tone: { ...(fileConfig.persona.tone as object), ...((dbPersona.tone as object) ?? {}) },
+                    protocols: { ...(fileConfig.persona.protocols as object), ...((dbPersona.protocols as object) ?? {}) },
+                } as any,
+                programs: dbPrograms.length
+                    ? { programs: dbPrograms as any[] }
+                    : fileConfig.programs,
+                settings: { ...fileConfig.settings, ...dbSettings } as any,
+            };
         }
 
         // RAG — retrieve relevant context from knowledge base (non-blocking)
@@ -315,7 +347,8 @@ async function processMessages(from: string, messageBody: string, tenantId?: str
                     session.conversationHistory,
                     messageBody,
                     systemInstruction,
-                    nextState
+                    nextState,
+                    tenantId
                 );
                 respostaIA = result.text;
                 paymentUrl = result.paymentUrl;
@@ -363,12 +396,7 @@ async function processMessages(from: string, messageBody: string, tenantId?: str
         // Só envia fallback para erros transientes (rede, timeout).
         const isPermanent = error?.category === 'PERMANENT' || error?.message?.includes('PERMANENT') || error?.message?.includes('não configurada') || error?.message?.includes('AI_GENERATION_FAILED');
         if (!isPermanent) {
-            try {
-                const fallbackMessage = 'Desculpe, estou passando por uma rápida atualização técnica no momento. Por favor, tente novamente em alguns instantes.';
-                ///await sendReply(tenantId, from, fallbackMessage);
-            } catch (sendError) {
-                console.error('❌ Falha ao enviar mensagem de fallback:', sendError);
-            }
+            await sendReply(tenantId, from, 'Desculpe, estou passando por uma rápida atualização técnica. Tente novamente em instantes.').catch(() => null);
         }
     }
 }
