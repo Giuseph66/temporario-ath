@@ -1,0 +1,47 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AppLayout } from './layouts/AppLayout';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { Onboarding } from './pages/Onboarding';
+import { Dashboard } from './pages/Dashboard';
+import { Settings } from './pages/Settings';
+import { Leads } from './pages/Leads';
+import { Conversas } from './pages/Conversas';
+import { Agente } from './pages/Agente';
+import { Integracoes } from './pages/Integracoes';
+import { Contatos } from './pages/Contatos';
+import { Logs } from './pages/Logs';
+
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+    const { accessToken } = useAuth();
+    return accessToken ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+function App() {
+    return (
+        <AuthProvider>
+            <BrowserRouter>
+                <Routes>
+                    <Route path="/login"      element={<Login />} />
+                    <Route path="/register"   element={<Register />} />
+                    <Route path="/onboarding" element={<Onboarding />} />
+                    <Route path="/" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
+                        <Route index element={<Navigate to="/dashboard" replace />} />
+                        <Route path="dashboard"   element={<Dashboard />} />
+                        <Route path="conversas"   element={<Conversas />} />
+                        <Route path="leads"       element={<Leads />} />
+                        <Route path="integracoes" element={<Integracoes />} />
+                        <Route path="contatos"    element={<Contatos />} />
+                        <Route path="agente"      element={<Agente />} />
+                        <Route path="config"      element={<Settings />} />
+                        <Route path="logs"        element={<Logs />} />
+                    </Route>
+                    <Route path="*" element={<Navigate to="/login" replace />} />
+                </Routes>
+            </BrowserRouter>
+        </AuthProvider>
+    );
+}
+
+export default App;

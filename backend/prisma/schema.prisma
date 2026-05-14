@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Multi-tenant SaaS — Sprint A ─────────────────────────────────────────────
+
+model Tenant {
+  id                String       @id @default(uuid())
+  name              String
+  slug              String       @unique
+  plan              String       @default("free")
+  evolutionInstance String?
+  evolutionApiKey   String?
+  evolutionBaseUrl  String?
+  geminiApiKey      String?
+  asaasApiKey       String?
+  asaasBaseUrl      String?      @default("https://sandbox.asaas.com/api/v3")
+  asaasWebhookSecret String?
+  metaAccessToken   String?
+  metaPhoneId       String?
+  metaVerifyToken   String?
+  googleCalendarId  String?
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+
+  users             User[]
+  agents            Agent[]
+  tenantUsers       TenantUser[]
+  knowledgeDocs     KnowledgeDocument[]
+  contacts          Contact[]
+}
+
+model TenantUser {
+  id           String    @id @default(uuid())
+  tenantId     String
+  email        String    @unique
+  passwordHash String
+  role         String    @default("admin")
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Agent {
+  id             String   @id @default(uuid())
+  tenantId       String
+  name           String
+  personaJson    Json
+  programsJson   Json
+  settingsJson   Json
+  geminiModel    String   @default("gemini-2.5-flash-preview-05-20")
+  isActive       Boolean  @default(true)
+  whatsappNumber String?
+  createdAt      DateTime @default(now())
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leads          User[]
+}
+
+// ─── Controle de idempotência do webhook Asaas ────────────────────────────────
+
+model ProcessedEvent {
+  id          String   @id
+  processedAt DateTime @default(now())
+}
+
+// ─── Status de matrícula ──────────────────────────────────────────────────────
+
+enum EnrollmentStatus {
+  LEAD
+  PAYMENT_PENDING
+  ENROLLED
+  CANCELLED
+}
+
+// ─── Leads / Alunos ───────────────────────────────────────────────────────────
+
+model User {
+  id               String           @id @default(uuid())
+  tenantId         String?
+  agentId          String?
+  phoneNumber      String
+  name             String?
+  age              Int?
+  goal             String?
+  currentProgramId String?
+  conversationState String?          @default("GREETING")
+  interactionCount Int              @default(0)
+  lastInteraction  DateTime         @default(now())
+  createdAt        DateTime         @default(now())
+  cpf              String?
+  email            String?
+  birthDate        String?
+  address          String?
+  paymentDay       Int?
+  enrollmentTarget String?
+  extraInfo        String?
+  isGroup          Boolean          @default(false)
+  lgpdConsent      Boolean          @default(false)
+  asaasCustomerId  String?          @unique
+  lastPaymentUrl   String?
+  enrollmentStatus EnrollmentStatus @default(LEAD)
+  enrollmentDate   DateTime?
+
+  tenant           Tenant?          @relation(fields: [tenantId], references: [id])
+  agent            Agent?           @relation(fields: [agentId], references: [id])
+  messages         ChatHistory[]
+
+  @@unique([phoneNumber, tenantId])
+}
+
+// ─── Cache de contatos da Evolution ─────────────────────────────────────────
+
+model Contact {
+  id            String   @id @default(uuid())
+  tenantId      String
+  phone         String
+  name          String?
+  customName    String?
+  profilePicUrl String?
+  syncedAt      DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+}
+
+// ─── RAG — Base de Conhecimento ──────────────────────────────────────────────
+
+model KnowledgeDocument {
+  id        String   @id @default(uuid())
+  tenantId  String
+  title     String
+  content   String   @db.Text
+  charCount Int      @default(0)
+  createdAt DateTime @default(now())
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  chunks    KnowledgeChunk[]
+}
+
+model KnowledgeChunk {
+  id            String                   @id @default(uuid())
+  tenantId      String
+  documentId    String
+  chunkIndex    Int
+  content       String                   @db.Text
+  embeddingJson String                   @db.Text  // fallback JSON — kept for backup/export
+  embedding     Unsupported("vector(768)")?        // pgvector — used for HNSW search
+  createdAt     DateTime                 @default(now())
+
+  document      KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+// ─── Histórico de Conversas ───────────────────────────────────────────────────
+
+model ChatHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

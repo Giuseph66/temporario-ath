@@ -1,0 +1,23 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: artemis-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: artemis
+      POSTGRES_USER: artemis
+      POSTGRES_PASSWORD: artemis_dev_123
+    ports:
+      - "5432:5432"
+    volumes:
+      - artemis_pgdata:/var/lib/postgresql/data
+      - ./infra/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U artemis -d artemis"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  artemis_pgdata:
+    driver: local

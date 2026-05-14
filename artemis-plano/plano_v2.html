@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Artemis Bot — Plano V2</title>
+<style>
+  :root {
+    --ink-1: #1a1a1a;
+    --ink-2: #2d2d2d;
+    --ink-3: #555;
+    --ink-4: #888;
+    --ink-5: #bbb;
+    --paper: #faf9f7;
+    --paper-2: #f3f1ee;
+    --paper-3: #ece9e4;
+    --line: #e5e1da;
+    --accent: #3d7a5e;
+    --accent-soft: #e8f0ec;
+    --accent-ink: #2a5c44;
+    --amber: #b45309;
+    --amber-soft: #fef3c7;
+    --danger: #dc2626;
+    --danger-soft: #fef2f2;
+    --blue: #1d4ed8;
+    --blue-soft: #eff6ff;
+    --purple: #7c3aed;
+    --purple-soft: #f5f3ff;
+    --orange: #ea580c;
+    --orange-soft: #fff7ed;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: var(--paper);
+    color: var(--ink-1);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'Courier New', monospace; }
+
+  /* ── Header ── */
+  .header {
+    background: var(--ink-1);
+    color: #fff;
+    padding: 48px 64px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute; top: 0; right: 0; bottom: 0;
+    width: 320px;
+    background: linear-gradient(135deg, transparent 60%, rgba(61,122,94,.3));
+  }
+  .header-label {
+    font-family: 'Courier New', monospace;
+    font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .header h1 {
+    font-size: 48px; font-weight: 400; letter-spacing: -1.5px;
+    line-height: 1.1; margin-bottom: 12px; color: #fff;
+  }
+  .header h1 span { color: var(--accent); }
+  .header p { font-size: 16px; color: #aaa; max-width: 520px; }
+  .header-meta {
+    margin-top: 32px;
+    display: flex; gap: 32px;
+  }
+  .meta-item { font-size: 13px; color: #888; }
+  .meta-item strong { display: block; color: #fff; font-size: 22px; margin-bottom: 2px; }
+
+  /* ── Layout ── */
+  .container { max-width: 1200px; margin: 0 auto; padding: 64px 48px; }
+  .section { margin-bottom: 64px; }
+  .section-title {
+    font-family: 'Courier New', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--ink-4); margin-bottom: 20px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--line);
+  }
+  h2 { font-size: 28px; font-weight: 400; letter-spacing: -.5px; color: var(--ink-1); margin-bottom: 8px; }
+  h3 { font-size: 16px; font-weight: 600; color: var(--ink-1); margin-bottom: 4px; }
+  p { color: var(--ink-3); font-size: 14px; }
+
+  /* ── Status Grid ── */
+  .status-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px; margin-top: 24px;
+  }
+  .status-card {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 12px; padding: 20px;
+  }
+  .status-card .tag {
+    display: inline-block;
+    font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 4px;
+    margin-bottom: 10px;
+  }
+  .tag-done { background: var(--accent-soft); color: var(--accent-ink); }
+  .tag-stub { background: var(--amber-soft); color: var(--amber); }
+  .tag-missing { background: var(--danger-soft); color: var(--danger); }
+  .tag-new { background: var(--blue-soft); color: var(--blue); }
+  .status-card ul { list-style: none; margin-top: 12px; }
+  .status-card ul li {
+    font-size: 13px; color: var(--ink-3); padding: 4px 0;
+    border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px;
+  }
+  .status-card ul li:last-child { border-bottom: none; }
+  .dot-green { color: var(--accent); font-size: 8px; }
+  .dot-amber { color: var(--amber); font-size: 8px; }
+  .dot-red { color: var(--danger); font-size: 8px; }
+
+  /* ── Sprint Table ── */
+  .sprint-block { margin-bottom: 40px; }
+  .sprint-header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 16px;
+  }
+  .sprint-num {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Courier New', monospace; font-size: 14px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .s1 { background: var(--accent-soft); color: var(--accent-ink); }
+  .s2 { background: var(--blue-soft); color: var(--blue); }
+  .s3 { background: var(--purple-soft); color: var(--purple); }
+  .s4 { background: var(--amber-soft); color: var(--amber); }
+  .s5 { background: var(--orange-soft); color: var(--orange); }
+
+  .sprint-title { font-size: 18px; font-weight: 600; color: var(--ink-1); }
+  .sprint-subtitle { font-size: 13px; color: var(--ink-4); }
+
+  .steps-table { width: 100%; border-collapse: collapse; }
+  .steps-table th {
+    font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--ink-4);
+    text-align: left; padding: 8px 12px;
+    border-bottom: 2px solid var(--line); background: var(--paper-2);
+  }
+  .steps-table td {
+    padding: 12px; font-size: 13px; color: var(--ink-2);
+    border-bottom: 1px solid var(--line); vertical-align: top;
+  }
+  .steps-table tr:hover td { background: var(--paper-2); }
+  .step-code {
+    font-family: 'Courier New', monospace; font-size: 11px;
+    color: var(--ink-4); white-space: nowrap;
+  }
+  .step-files {
+    font-family: 'Courier New', monospace; font-size: 11px;
+    color: var(--ink-3); line-height: 1.7;
+  }
+  .step-files .new { color: var(--blue); }
+  .step-files .mod { color: var(--amber); }
+  .badge-blocker {
+    font-family: 'Courier New', monospace; font-size: 10px;
+    background: var(--danger-soft); color: var(--danger);
+    padding: 2px 7px; border-radius: 4px; white-space: nowrap;
+  }
+  .badge-db {
+    font-family: 'Courier New', monospace; font-size: 10px;
+    background: var(--accent-soft); color: var(--accent-ink);
+    padding: 2px 7px; border-radius: 4px; white-space: nowrap;
+  }
+
+  /* ── Architecture diagram ── */
+  .arch-box {
+    background: var(--paper-2); border: 1px solid var(--line);
+    border-radius: 16px; padding: 32px; margin-top: 24px;
+    font-family: 'Courier New', monospace; font-size: 13px; line-height: 2;
+    overflow-x: auto; color: var(--ink-2);
+  }
+  .arch-comment { color: var(--ink-5); }
+  .arch-highlight { color: var(--accent); font-weight: 700; }
+  .arch-new { color: var(--blue); }
+  .arch-warn { color: var(--amber); }
+
+  /* ── Screen map ── */
+  .screen-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+  .screen-card {
+    border: 1px solid var(--line); border-radius: 12px;
+    overflow: hidden;
+  }
+  .screen-card-head {
+    padding: 14px 16px; border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .screen-card-head h4 { font-size: 14px; font-weight: 600; color: var(--ink-1); }
+  .screen-card-body { padding: 14px 16px; background: var(--paper); }
+  .screen-card-body ul { list-style: none; }
+  .screen-card-body ul li {
+    font-size: 12.5px; color: var(--ink-3); padding: 3px 0;
+    padding-left: 16px; position: relative;
+  }
+  .screen-card-body ul li::before {
+    content: '→'; position: absolute; left: 0;
+    color: var(--ink-5); font-size: 11px;
+  }
+  .route-badge {
+    font-family: 'Courier New', monospace; font-size: 10px;
+    background: var(--paper-3); color: var(--ink-4);
+    padding: 2px 7px; border-radius: 4px;
+  }
+
+  /* ── Integration cards ── */
+  .integration-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 24px; }
+  .int-card {
+    border: 1px solid var(--line); border-radius: 12px; padding: 20px;
+    background: var(--paper);
+  }
+  .int-card-head {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+  }
+  .int-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .int-card h4 { font-size: 15px; font-weight: 600; color: var(--ink-1); }
+  .int-card p { font-size: 12.5px; color: var(--ink-4); margin-top: 2px; }
+  .int-fields { margin-top: 12px; }
+  .int-field {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 12.5px;
+  }
+  .int-field:last-child { border-bottom: none; }
+  .int-field-name { color: var(--ink-3); }
+  .int-field-type {
+    font-family: 'Courier New', monospace; font-size: 10px;
+    color: var(--ink-5); background: var(--paper-2);
+    padding: 1px 6px; border-radius: 3px;
+  }
+
+  /* ── Env Map ── */
+  .env-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  .env-table th {
+    font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--ink-4);
+    text-align: left; padding: 8px 12px;
+    border-bottom: 2px solid var(--line);
+  }
+  .env-table td {
+    padding: 10px 12px; font-size: 12.5px; color: var(--ink-2);
+    border-bottom: 1px solid var(--line);
+    font-family: 'Courier New', monospace;
+  }
+  .env-keep { color: var(--accent-ink); }
+  .env-move { color: var(--amber); }
+  .env-desc { font-family: 'Georgia', serif; color: var(--ink-3); font-size: 12px; }
+
+  /* ── Folder tree ── */
+  .tree {
+    background: var(--ink-1); color: #d4d0c8;
+    font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.9;
+    padding: 28px 32px; border-radius: 16px; margin-top: 24px;
+    overflow-x: auto;
+  }
+  .tree .dir { color: #7dd3b0; }
+  .tree .file { color: #d4d0c8; }
+  .tree .new-item { color: #60a5fa; }
+  .tree .moved { color: #fbbf24; }
+  .tree .comment { color: #666; }
+
+  /* ── Timeline ── */
+  .timeline { margin-top: 24px; position: relative; }
+  .timeline::before {
+    content: ''; position: absolute; left: 19px; top: 0; bottom: 0;
+    width: 2px; background: var(--line);
+  }
+  .tl-item {
+    display: flex; gap: 20px; margin-bottom: 24px; position: relative;
+  }
+  .tl-dot {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 2px solid var(--line); background: var(--paper);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Courier New', monospace; font-size: 12px; font-weight: 700;
+    flex-shrink: 0; position: relative; z-index: 1;
+  }
+  .tl-content { flex: 1; padding-top: 8px; }
+  .tl-content h4 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .tl-content p { font-size: 13px; color: var(--ink-3); }
+  .tl-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .tl-tag {
+    font-family: 'Courier New', monospace; font-size: 10px;
+    padding: 2px 8px; border-radius: 4px; border: 1px solid var(--line);
+    color: var(--ink-4);
+  }
+
+  /* ── Footer ── */
+  .footer {
+    background: var(--paper-2); border-top: 1px solid var(--line);
+    padding: 32px 64px; text-align: center;
+    font-family: 'Courier New', monospace; font-size: 11px;
+    color: var(--ink-5); letter-spacing: .5px;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-label">Artemis Bot · Planejamento</div>
+  <h1>Plano <span>V2</span></h1>
+  <p>Plataforma de atendimento agêntico multi-tenant com WhatsApp, pagamentos e calendário — configurável 100% via UI.</p>
+  <div class="header-meta">
+    <div class="meta-item"><strong>12</strong> passos de execução</div>
+    <div class="meta-item"><strong>5</strong> sprints V2</div>
+    <div class="meta-item"><strong>5</strong> telas novas</div>
+    <div class="meta-item"><strong>4</strong> integrações via UI</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ─── 1. ESTADO ATUAL ─────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">01 · Estado Atual do Sistema</div>
+    <h2>O que já existe</h2>
+    <p>Sprint 0 + Sprints A–F concluídos (48/51 passos). Backend multi-tenant funcional, frontend com 2 telas reais e 5 stubs.</p>
+
+    <div class="status-grid">
+      <div class="status-card">
+        <span class="tag tag-done">✓ Backend — Concluído</span>
+        <h3>API Express / TypeScript</h3>
+        <ul>
+          <li><span class="dot-green">●</span> Auth JWT (login, register, refresh)</li>
+          <li><span class="dot-green">●</span> Multi-tenant (Tenant, TenantUser, Agent)</li>
+          <li><span class="dot-green">●</span> Leads CRUD + Metrics API</li>
+          <li><span class="dot-green">●</span> Agent config API (persona/programs/settings)</li>
+          <li><span class="dot-green">●</span> Evolution API (instâncias WhatsApp)</li>
+          <li><span class="dot-green">●</span> Asaas webhook + pagamentos</li>
+          <li><span class="dot-green">●</span> Meta WhatsApp webhook</li>
+          <li><span class="dot-green">●</span> Google Calendar service</li>
+          <li><span class="dot-green">●</span> Gemini AI service</li>
+          <li><span class="dot-green">●</span> LGPD cron cleanup</li>
+        </ul>
+      </div>
+
+      <div class="status-card">
+        <span class="tag tag-done">✓ Frontend — Parcial</span>
+        <h3>React / Vite (packages/dashboard)</h3>
+        <ul>
+          <li><span class="dot-green">●</span> Login + Register + Onboarding</li>
+          <li><span class="dot-green">●</span> AppLayout + sidebar nav</li>
+          <li><span class="dot-green">●</span> Settings (Gemini key, Evolution key/URL)</li>
+          <li><span class="dot-green">●</span> Design system (tokens, Fraunces/Geist Mono)</li>
+          <li><span class="dot-amber">◐</span> Dashboard — stub vazio</li>
+          <li><span class="dot-amber">◐</span> Conversas — stub vazio</li>
+          <li><span class="dot-amber">◐</span> Leads — stub vazio</li>
+          <li><span class="dot-amber">◐</span> Integrações — stub vazio</li>
+          <li><span class="dot-amber">◐</span> Agente — stub vazio</li>
+        </ul>
+      </div>
+
+      <div class="status-card">
+        <span class="tag tag-missing">✗ Gaps Críticos</span>
+        <h3>O que falta</h3>
+        <ul>
+          <li><span class="dot-red">●</span> Asaas keys lidas do ENV (não do banco)</li>
+          <li><span class="dot-red">●</span> Meta keys lidas do ENV (não do banco)</li>
+          <li><span class="dot-red">●</span> Google Calendar ID lido do ENV</li>
+          <li><span class="dot-red">●</span> Schema sem campos de integração por tenant</li>
+          <li><span class="dot-red">●</span> Sem tela de configuração de integrações</li>
+          <li><span class="dot-red">●</span> Frontend em pasta packages/ (confuso)</li>
+          <li><span class="dot-red">●</span> 5 rotas retornam "em breve"</li>
+        </ul>
+      </div>
+
+      <div class="status-card">
+        <span class="tag tag-new">→ V2 entrega</span>
+        <h3>O que V2 resolve</h3>
+        <ul>
+          <li><span class="dot-green">●</span> Hub de integrações 100% via UI</li>
+          <li><span class="dot-green">●</span> Chaves por-tenant no banco (Asaas, Meta, Calendar)</li>
+          <li><span class="dot-green">●</span> Dashboard com métricas reais</li>
+          <li><span class="dot-green">●</span> Leads table completa + modal</li>
+          <li><span class="dot-green">●</span> Conversas com timeline visual</li>
+          <li><span class="dot-green">●</span> Agente configurável (persona, programas)</li>
+          <li><span class="dot-green">●</span> Pasta frontend/ organizada</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── 2. ENV MAP ───────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">02 · Mapa de Variáveis de Ambiente</div>
+    <h2>O que fica no ENV vs. vai para o banco</h2>
+    <p>Regra: chaves por-tenant vão para o banco. Chaves de infraestrutura ficam no ENV.</p>
+
+    <table class="env-table">
+      <thead>
+        <tr>
+          <th>Variável</th>
+          <th>Destino</th>
+          <th>Motivo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>DATABASE_URL</td>
+          <td><span class="env-keep">Mantém no ENV</span></td>
+          <td class="env-desc">Infraestrutura — necessário para conectar ao banco antes de qualquer query</td>
+        </tr>
+        <tr>
+          <td>JWT_ACCESS_SECRET, JWT_REFRESH_SECRET</td>
+          <td><span class="env-keep">Mantém no ENV</span></td>
+          <td class="env-desc">Segurança do servidor — único por deployment</td>
+        </tr>
+        <tr>
+          <td>PORT, NODE_ENV</td>
+          <td><span class="env-keep">Mantém no ENV</span></td>
+          <td class="env-desc">Configuração de runtime do servidor</td>
+        </tr>
+        <tr>
+          <td>RESPONDI_WEBHOOK_SECRET</td>
+          <td><span class="env-keep">Mantém no ENV</span></td>
+          <td class="env-desc">Serviço global, não por-tenant</td>
+        </tr>
+        <tr>
+          <td>GEMINI_API_KEY</td>
+          <td><span class="env-move">→ Banco (já migrado)</span></td>
+          <td class="env-desc">Já existe como tenant.geminiApiKey — ENV é fallback</td>
+        </tr>
+        <tr>
+          <td>EVOLUTION_BASE_URL, EVOLUTION_API_KEY</td>
+          <td><span class="env-move">→ Banco (já migrado)</span></td>
+          <td class="env-desc">Já existem no tenant — Settings atual já gerencia</td>
+        </tr>
+        <tr>
+          <td>ASAAS_API_KEY, ASAAS_BASE_URL, ASAAS_WEBHOOK_SECRET</td>
+          <td><span class="env-move">→ Banco (V2)</span></td>
+          <td class="env-desc">Cada tenant tem conta Asaas própria — configurar via Integrações</td>
+        </tr>
+        <tr>
+          <td>META_ACCESS_TOKEN, META_PHONE_ID, META_VERIFY_TOKEN</td>
+          <td><span class="env-move">→ Banco (V2)</span></td>
+          <td class="env-desc">Cada tenant tem conta Meta Business própria</td>
+        </tr>
+        <tr>
+          <td>GOOGLE_CALENDAR_ID</td>
+          <td><span class="env-move">→ Banco (V2)</span></td>
+          <td class="env-desc">Cada tenant usa calendário próprio para agendamentos</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── 3. INTEGRATIONS ──────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">03 · Hub de Integrações</div>
+    <h2>4 integrações configuráveis via UI</h2>
+    <p>Cada integração tem tela própria na plataforma. Zero necessidade de acessar servidor para configurar.</p>
+
+    <div class="integration-grid">
+      <div class="int-card">
+        <div class="int-card-head">
+          <div class="int-icon" style="background:#e8f5f0">📱</div>
+          <div>
+            <h4>Evolution API</h4>
+            <p>WhatsApp via servidor próprio (self-hosted)</p>
+          </div>
+        </div>
+        <div class="int-fields">
+          <div class="int-field">
+            <span class="int-field-name">Base URL</span>
+            <span class="int-field-type">URL</span>
+          </div>
+          <div class="int-field">
+            <span class="int-field-name">API Key</span>
+            <span class="int-field-type">secret</span>
+          </div>
+          <div class="int-field">
+            <span class="int-field-name">Nome da instância</span>
+            <span class="int-field-type">string</span>
+          </div>
+          <div class="int-field">
+            <span class="int-field-name">QR Code / Status</span>
+            <span class="int-field-type">action</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="int-card">
+        <div class="int-card-head">
+          <div class="int-icon" style="background:#e8f5f0">💬</div>
+          <div>
+            <h4>Meta WhatsApp Business</h4>
+            <p>API oficial Meta para WhatsApp Business</p>
+          </div>
+        </div>
+        <div class="int-fields">
+          <div class="int-field">
+            <span class="int-field-name">Access Token</span>
+            <span class="int-field-type">secret</span>
+          </div>
+          <div class="int-field">
+            <span class="int-field-name">Phone Number ID</span>
+            <span class="int-field-type">string</span>
+          </div>
+          <div class="int-field">
+            <span class="int-field-name">Verify Token</span>
+            <span class="int-field-type">secret</span>
+          </div>
+          <div class="int-field">
+            <span class="int-field-name">Webhook URL (copiar)</span>
+            <span class="int-field-type">helper</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="int-card">
+        <div class="int-card-head">
+          <div class="int-icon" style="background:#fef9ec">💳</div>
+          <div>
+            <h4>Asaas</h4>
+            <p>Gateway de pagamento e cobranças</p>
+          </div>
+        </div>
+        <div class="int-fields">
+          <div class="int-field">
+            <span class="int-field-name">API Key</span>
+            <span class="int-field-type">secret</span>
+          </div>
+          <div class="int-field">
+            <span class="int-field-name">Ambiente</span>
+            <span class="int-field-type">sandbox | produção</span>
+          </div>
+          <div class="int-field">
+            <span class="int-field-name">Webhook Secret</span>
+            <span class="int-field-type">secret</span>
+          </div>
+          <div class="int-field">
+            <span class="int-field-name">Webhook URL (copiar)</span>
+            <span class="int-field-type">helper</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="int-card">
+        <div class="int-card-head">
+          <div class="int-icon" style="background:#eff6ff">📅</div>
+          <div>
+            <h4>Google Calendar</h4>
+            <p>Agendamentos automáticos pelo agente</p>
+          </div>
+        </div>
+        <div class="int-fields">
+          <div class="int-field">
+            <span class="int-field-name">Calendar ID</span>
+            <span class="int-field-type">string</span>
+          </div>
+          <div class="int-field">
+            <span class="int-field-name">Credenciais OAuth</span>
+            <span class="int-field-type">file (servidor)</span>
+          </div>
+          <div class="int-field">
+            <span class="int-field-name">Status conexão</span>
+            <span class="int-field-type">read-only</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── 4. SCREEN MAP ────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">04 · Mapa de Telas</div>
+    <h2>Todas as telas da plataforma</h2>
+    <p>6 rotas autenticadas + 3 rotas públicas. Todas precisam estar 100% funcionais no V2.</p>
+
+    <div class="screen-grid">
+      <div class="screen-card">
+        <div class="screen-card-head">
+          <h4>Dashboard</h4>
+          <span class="route-badge">/dashboard</span>
+        </div>
+        <div class="screen-card-body">
+          <ul>
+            <li>4 cards: leads, matriculados, conversas, conversão</li>
+            <li>Status do agente + toggle ativo/inativo</li>
+            <li>Feed: últimas 5 atividades</li>
+            <li>API: GET /api/metrics + GET /api/agent</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-card-head">
+          <h4>Conversas</h4>
+          <span class="route-badge">/conversas</span>
+        </div>
+        <div class="screen-card-body">
+          <ul>
+            <li>Lista lateral: avatar, nome, preview, timestamp</li>
+            <li>Busca por nome/telefone</li>
+            <li>Painel direito: timeline de msgs (user/assistant)</li>
+            <li>API: GET /api/conversations + /api/leads/:id</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-card-head">
+          <h4>Leads</h4>
+          <span class="route-badge">/leads</span>
+        </div>
+        <div class="screen-card-body">
+          <ul>
+            <li>Tabela: nome, tel, status badge, última interação</li>
+            <li>Filtro por status + busca por nome/tel</li>
+            <li>Modal: detalhes + histórico + mudar estado</li>
+            <li>Exportar JSON (LGPD Art. 15)</li>
+            <li>API: GET /api/leads + PATCH state + DELETE</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-card-head">
+          <h4>Integrações</h4>
+          <span class="route-badge">/integracoes</span>
+        </div>
+        <div class="screen-card-body">
+          <ul>
+            <li>Cards: Evolution, Meta, Asaas, Google Calendar</li>
+            <li>Status badge por integração (ativo/pendente)</li>
+            <li>Formulário inline por card</li>
+            <li>Evolution: QR code + status da instância</li>
+            <li>API: GET /api/integrations + PATCH por provider</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-card-head">
+          <h4>Agente</h4>
+          <span class="route-badge">/agente</span>
+        </div>
+        <div class="screen-card-body">
+          <ul>
+            <li>Identidade: nome, role, número WhatsApp, modelo Gemini</li>
+            <li>Programas: lista add/edit/delete com preços</li>
+            <li>Configurações: settingsJson editor</li>
+            <li>Toggle ativo/inativo</li>
+            <li>API: GET+PATCH /api/agent/*</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-card-head">
+          <h4>Configurações</h4>
+          <span class="route-badge">/config</span>
+        </div>
+        <div class="screen-card-body">
+          <ul>
+            <li>Conta: nome empresa, slug, plano</li>
+            <li>Gemini API Key (único campo de chave aqui)</li>
+            <li>Zona de perigo: exportar + sair</li>
+            <li>Nota: Evolution foi para /integracoes</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── 5. SPRINTS ───────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">05 · Sprints de Execução</div>
+    <h2>Passos V2 detalhados</h2>
+    <p>Ordem de execução otimizada para mínimo de bloqueios. Backend antes do frontend.</p>
+
+    <!-- Sprint 1 -->
+    <div class="sprint-block">
+      <div class="sprint-header">
+        <div class="sprint-num s1">S1</div>
+        <div>
+          <div class="sprint-title">Database & Schema</div>
+          <div class="sprint-subtitle">Fundação para integrações por-tenant</div>
+        </div>
+      </div>
+      <table class="steps-table">
+        <thead>
+          <tr><th>Código</th><th>Passo</th><th>Arquivos</th><th>Deps</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="step-code">S1.1</td>
+            <td>Adicionar 7 campos de integração ao model Tenant no schema</td>
+            <td class="step-files"><span class="mod">prisma/schema.prisma</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="step-code">S1.2</td>
+            <td>Criar e aplicar migration PostgreSQL</td>
+            <td class="step-files"><span class="new">prisma/migrations/add_integration_fields/</span></td>
+            <td><span class="badge-blocker">PostgreSQL ativo</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Sprint 2 -->
+    <div class="sprint-block">
+      <div class="sprint-header">
+        <div class="sprint-num s2">S2</div>
+        <div>
+          <div class="sprint-title">Backend — IntegrationController</div>
+          <div class="sprint-subtitle">Endpoints para gerenciar chaves de integração</div>
+        </div>
+      </div>
+      <table class="steps-table">
+        <thead>
+          <tr><th>Código</th><th>Passo</th><th>Arquivos</th><th>Deps</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="step-code">S2.1</td>
+            <td>Criar IntegrationController com GET /api/integrations</td>
+            <td class="step-files"><span class="new">src/controllers/IntegrationController.ts</span></td>
+            <td>S1</td>
+          </tr>
+          <tr>
+            <td class="step-code">S2.2</td>
+            <td>PATCH /api/integrations/asaas — salvar asaasApiKey, asaasBaseUrl, asaasWebhookSecret</td>
+            <td class="step-files"><span class="mod">src/controllers/IntegrationController.ts</span></td>
+            <td>S2.1</td>
+          </tr>
+          <tr>
+            <td class="step-code">S2.3</td>
+            <td>PATCH /api/integrations/meta — salvar metaAccessToken, metaPhoneId, metaVerifyToken</td>
+            <td class="step-files"><span class="mod">src/controllers/IntegrationController.ts</span></td>
+            <td>S2.1</td>
+          </tr>
+          <tr>
+            <td class="step-code">S2.4</td>
+            <td>PATCH /api/integrations/calendar — salvar googleCalendarId</td>
+            <td class="step-files"><span class="mod">src/controllers/IntegrationController.ts</span></td>
+            <td>S2.1</td>
+          </tr>
+          <tr>
+            <td class="step-code">S2.5</td>
+            <td>PATCH /api/integrations/evolution — consolidar evolution keys (mover de TenantController)</td>
+            <td class="step-files"><span class="mod">src/controllers/IntegrationController.ts</span></td>
+            <td>S2.1</td>
+          </tr>
+          <tr>
+            <td class="step-code">S2.6</td>
+            <td>Registrar todas as rotas de integração no index.ts</td>
+            <td class="step-files"><span class="mod">src/index.ts</span></td>
+            <td>S2.1–S2.5</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Sprint 3 -->
+    <div class="sprint-block">
+      <div class="sprint-header">
+        <div class="sprint-num s3">S3</div>
+        <div>
+          <div class="sprint-title">Backend — Services do Banco</div>
+          <div class="sprint-subtitle">Asaas, Meta e Calendar lendo credenciais por tenant</div>
+        </div>
+      </div>
+      <table class="steps-table">
+        <thead>
+          <tr><th>Código</th><th>Passo</th><th>Arquivos</th><th>Deps</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="step-code">S3.1</td>
+            <td>AsaasService: aceitar apiKey + baseUrl como parâmetros (não hardcode do ENV)</td>
+            <td class="step-files"><span class="mod">src/services/AsaasService.ts</span></td>
+            <td>S1</td>
+          </tr>
+          <tr>
+            <td class="step-code">S3.2</td>
+            <td>AsaasWebhookController: instanciar AsaasService com chaves do banco do tenant</td>
+            <td class="step-files"><span class="mod">src/controllers/AsaasWebhookController.ts</span></td>
+            <td>S3.1</td>
+          </tr>
+          <tr>
+            <td class="step-code">S3.3</td>
+            <td>WebhookController (Meta): buscar tenant por metaPhoneId para multi-tenant; ler metaVerifyToken do banco</td>
+            <td class="step-files"><span class="mod">src/controllers/WebhookController.ts</span></td>
+            <td>S1</td>
+          </tr>
+          <tr>
+            <td class="step-code">S3.4</td>
+            <td>CalendarService: aceitar calendarId como parâmetro; fallback para ENV</td>
+            <td class="step-files"><span class="mod">src/services/CalendarService.ts</span></td>
+            <td>S1</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Sprint 4 -->
+    <div class="sprint-block">
+      <div class="sprint-header">
+        <div class="sprint-num s4">S4</div>
+        <div>
+          <div class="sprint-title">Frontend — Telas</div>
+          <div class="sprint-subtitle">5 telas stubs → funcionais</div>
+        </div>
+      </div>
+      <table class="steps-table">
+        <thead>
+          <tr><th>Código</th><th>Passo</th><th>Arquivos</th><th>Deps</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="step-code">S4.1</td>
+            <td>Renomear packages/dashboard → frontend/ e atualizar paths</td>
+            <td class="step-files">
+              <span class="moved">packages/dashboard/ → frontend/</span><br>
+              <span class="mod">frontend/package.json, vite.config.ts</span>
+            </td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="step-code">S4.2</td>
+            <td>Dashboard page: 4 metric cards + agent status + activity feed (GET /api/metrics)</td>
+            <td class="step-files"><span class="new">frontend/src/pages/Dashboard.tsx</span></td>
+            <td>S4.1</td>
+          </tr>
+          <tr>
+            <td class="step-code">S4.3</td>
+            <td>Leads page: tabela com filtros, busca, status badges, modal detail, exportar</td>
+            <td class="step-files"><span class="new">frontend/src/pages/Leads.tsx</span></td>
+            <td>S4.1</td>
+          </tr>
+          <tr>
+            <td class="step-code">S4.4</td>
+            <td>Conversas page: lista lateral + chat timeline (user/assistant bolhas)</td>
+            <td class="step-files"><span class="new">frontend/src/pages/Conversas.tsx</span></td>
+            <td>S4.1</td>
+          </tr>
+          <tr>
+            <td class="step-code">S4.5</td>
+            <td>Agente page: tabs Identidade / Programas / Configurações + toggle</td>
+            <td class="step-files"><span class="new">frontend/src/pages/Agente.tsx</span></td>
+            <td>S4.1</td>
+          </tr>
+          <tr>
+            <td class="step-code">S4.6</td>
+            <td>Integrações Hub: 4 cards (Evolution, Meta, Asaas, Calendar) com formulários</td>
+            <td class="step-files"><span class="new">frontend/src/pages/Integracoes.tsx</span></td>
+            <td>S2, S4.1</td>
+          </tr>
+          <tr>
+            <td class="step-code">S4.7</td>
+            <td>Settings simplificada: remover Evolution (foi para Integrações)</td>
+            <td class="step-files"><span class="mod">frontend/src/pages/Settings.tsx</span></td>
+            <td>S4.6</td>
+          </tr>
+          <tr>
+            <td class="step-code">S4.8</td>
+            <td>App.tsx: importar páginas reais e remover stubs</td>
+            <td class="step-files"><span class="mod">frontend/src/App.tsx</span></td>
+            <td>S4.2–S4.6</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Sprint 5 -->
+    <div class="sprint-block">
+      <div class="sprint-header">
+        <div class="sprint-num s5">S5</div>
+        <div>
+          <div class="sprint-title">Polimento & Produção</div>
+          <div class="sprint-subtitle">UX, testes e deploy readiness</div>
+        </div>
+      </div>
+      <table class="steps-table">
+        <thead>
+          <tr><th>Código</th><th>Passo</th><th>Descrição</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="step-code">S5.1</td>
+            <td>Loading states</td>
+            <td>Skeletons em todas as queries. Error boundaries com mensagem amigável.</td>
+          </tr>
+          <tr>
+            <td class="step-code">S5.2</td>
+            <td>Sidebar com ícones</td>
+            <td>Adicionar ícones SVG inline a cada item de navegação no AppLayout.</td>
+          </tr>
+          <tr>
+            <td class="step-code">S5.3</td>
+            <td>Onboarding completo</td>
+            <td>Wizard conecta ao fluxo: configurar Gemini → escolher provider WhatsApp → conectar instância.</td>
+          </tr>
+          <tr>
+            <td class="step-code">S5.4</td>
+            <td>Multi-agente</td>
+            <td>Se tenant tem múltiplos agents, seletor na sidebar. (Futuro — schema já suporta.)</td>
+          </tr>
+          <tr>
+            <td class="step-code">S5.5</td>
+            <td>Testes e2e</td>
+            <td>Playwright: login → leads list → lead detail → integração configurada. CI no GitHub Actions.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── 6. FOLDER STRUCTURE ──────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">06 · Estrutura de Pastas</div>
+    <h2>Antes → Depois</h2>
+    <p>O backend fica na raiz (package.json root). O frontend move de packages/dashboard para frontend/.</p>
+
+    <div class="tree">
+<span class="comment"># ANTES</span>
+Artemis-Bot/
+├── <span class="dir">src/</span>               <span class="comment">← backend TypeScript</span>
+├── <span class="dir">prisma/</span>            <span class="comment">← schema + migrations</span>
+├── <span class="dir">config/</span>            <span class="comment">← persona.json, programs.json</span>
+├── <span class="dir">packages/</span>
+│   └── <span class="dir">dashboard/</span>     <span class="comment">← frontend (confuso)</span>
+│       ├── <span class="dir">src/</span>
+│       └── package.json
+├── <span class="dir">artemis-plano/</span>
+│   ├── <span class="dir">passos/</span>        <span class="comment">← V1 (concluído)</span>
+│   └── plano_saas.html
+└── package.json      <span class="comment">← raiz = backend</span>
+
+<span class="comment"># DEPOIS</span>
+Artemis-Bot/
+├── <span class="dir">src/</span>               <span class="comment">← backend TypeScript (igual)</span>
+├── <span class="dir">prisma/</span>            <span class="comment">← schema + migrations (igual)</span>
+├── <span class="dir">config/</span>            <span class="comment">← configs (igual)</span>
+├── <span class="new-item">frontend/</span>          <span class="comment">← era packages/dashboard/</span>
+│   ├── <span class="dir">src/</span>
+│   │   ├── <span class="dir">pages/</span>     <span class="comment">← todas as telas</span>
+│   │   ├── <span class="dir">components/</span>
+│   │   ├── <span class="dir">contexts/</span>
+│   │   ├── <span class="dir">layouts/</span>
+│   │   └── <span class="dir">design/</span>
+│   └── package.json
+├── <span class="dir">artemis-plano/</span>
+│   ├── <span class="dir">passos/</span>        <span class="comment">← V1 (concluído)</span>
+│   ├── <span class="new-item">passos-v2/</span>     <span class="comment">← V2 (este documento)</span>
+│   ├── plano_saas.html
+│   └── <span class="new-item">plano_v2.html</span>  <span class="comment">← este arquivo</span>
+└── package.json      <span class="comment">← raiz = backend</span>
+    </div>
+  </div>
+
+  <!-- ─── 7. TIMELINE ─────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">07 · Ordem de Execução Recomendada</div>
+    <h2>Sequência sem bloqueios</h2>
+    <p>Backend primeiro, depois frontend. Schema antes dos services.</p>
+
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-dot s1" style="color:var(--accent-ink)">1</div>
+        <div class="tl-content">
+          <h4>Documentação + Renomear frontend/</h4>
+          <p>Criar passos-v2/, plano_v2.html. Renomear packages/dashboard → frontend/. Sem dependências.</p>
+          <div class="tl-tags">
+            <span class="tl-tag">passos-v2/</span>
+            <span class="tl-tag">plano_v2.html</span>
+            <span class="tl-tag">mv packages/dashboard frontend/</span>
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot s2" style="color:var(--blue)">2</div>
+        <div class="tl-content">
+          <h4>Schema Prisma + Migration</h4>
+          <p>Adicionar 7 campos ao model Tenant. Requer PostgreSQL ativo para aplicar migração.</p>
+          <div class="tl-tags">
+            <span class="tl-tag">prisma/schema.prisma</span>
+            <span class="tl-tag">npx prisma migrate dev</span>
+            <span class="badge-blocker">PostgreSQL ativo</span>
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot s3" style="color:var(--purple)">3</div>
+        <div class="tl-content">
+          <h4>IntegrationController + Rotas</h4>
+          <p>Criar controller, endpoints GET e PATCH por provider. Registrar em index.ts.</p>
+          <div class="tl-tags">
+            <span class="tl-tag">IntegrationController.ts</span>
+            <span class="tl-tag">src/index.ts</span>
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot s4" style="color:var(--amber)">4</div>
+        <div class="tl-content">
+          <h4>Atualizar Services</h4>
+          <p>AsaasService, WebhookController (Meta) e CalendarService passam a ler do banco por tenant. ENV vira fallback.</p>
+          <div class="tl-tags">
+            <span class="tl-tag">AsaasService.ts</span>
+            <span class="tl-tag">WebhookController.ts</span>
+            <span class="tl-tag">CalendarService.ts</span>
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot s5" style="color:var(--orange)">5</div>
+        <div class="tl-content">
+          <h4>Implementar 5 telas Frontend</h4>
+          <p>Dashboard → Leads → Conversas → Agente → Integrações. Settings simplificada. App.tsx atualizado.</p>
+          <div class="tl-tags">
+            <span class="tl-tag">Dashboard.tsx</span>
+            <span class="tl-tag">Leads.tsx</span>
+            <span class="tl-tag">Conversas.tsx</span>
+            <span class="tl-tag">Agente.tsx</span>
+            <span class="tl-tag">Integracoes.tsx</span>
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="background:var(--accent);color:#fff;border-color:var(--accent)">✓</div>
+        <div class="tl-content">
+          <h4>Verificação Final</h4>
+          <p>npx tsc --noEmit (backend). cd frontend &amp;&amp; npm run build. Testar fluxo: login → leads → integrações → agente.</p>
+          <div class="tl-tags">
+            <span class="tl-tag">tsc --noEmit</span>
+            <span class="tl-tag">npm run build</span>
+            <span class="tl-tag">teste manual</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── 8. CHECKLIST ────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">08 · Critérios de Conclusão V2</div>
+    <h2>Definition of Done</h2>
+    <p>V2 está pronto quando todos esses critérios passarem.</p>
+
+    <div class="status-grid" style="margin-top:24px">
+      <div class="status-card">
+        <span class="tag tag-new">Backend</span>
+        <ul>
+          <li><span class="dot-amber">○</span> <code>npx tsc --noEmit</code> zero erros</li>
+          <li><span class="dot-amber">○</span> GET /api/integrations retorna JSON com 4 providers</li>
+          <li><span class="dot-amber">○</span> PATCH /api/integrations/asaas salva no banco</li>
+          <li><span class="dot-amber">○</span> Asaas webhook usa chave do banco</li>
+          <li><span class="dot-amber">○</span> Meta webhook identifica tenant por metaPhoneId</li>
+          <li><span class="dot-amber">○</span> CalendarService usa googleCalendarId do banco</li>
+        </ul>
+      </div>
+
+      <div class="status-card">
+        <span class="tag tag-new">Frontend</span>
+        <ul>
+          <li><span class="dot-amber">○</span> <code>cd frontend &amp;&amp; npm run build</code> sem erros</li>
+          <li><span class="dot-amber">○</span> Nenhuma rota exibe "em breve"</li>
+          <li><span class="dot-amber">○</span> Dashboard exibe métricas reais</li>
+          <li><span class="dot-amber">○</span> Leads table com filtro e modal</li>
+          <li><span class="dot-amber">○</span> Conversas mostra histórico de msgs</li>
+          <li><span class="dot-amber">○</span> Integrações configura todos os 4 providers</li>
+          <li><span class="dot-amber">○</span> Agente edita persona e programas</li>
+        </ul>
+      </div>
+
+      <div class="status-card">
+        <span class="tag tag-new">Estrutura</span>
+        <ul>
+          <li><span class="dot-amber">○</span> packages/ não existe mais</li>
+          <li><span class="dot-amber">○</span> frontend/ tem todos os arquivos do dashboard</li>
+          <li><span class="dot-amber">○</span> artemis-plano/passos-v2/ com 5 arquivos md</li>
+          <li><span class="dot-amber">○</span> plano_v2.html acessível no browser</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Artemis Bot · Plano V2 · Gerado em 2026-05-14 · 12 passos · 5 sprints
+</div>
+
+</body>
+</html>
