@@ -1,8 +1,5 @@
 import { prisma } from '../utils/prisma';
 import * as bcrypt from 'bcrypt';
-import personaDefault from '../../config/persona.json';
-import programsDefault from '../../config/programs.json';
-import settingsDefault from '../../config/settings.json';
 
 export async function createTenant(params: {
     companyName: string;
@@ -23,18 +20,28 @@ export async function createTenant(params: {
             data: { tenantId: tenant.id, email: ownerEmail, passwordHash, role: 'owner' },
         });
 
-        const personaJson = { ...personaDefault, name: agentName };
-
-        await tx.agent.create({
+        const agent = await tx.agent.create({
             data: {
                 tenantId: tenant.id,
                 name: agentName,
-                personaJson,
-                programsJson: programsDefault as object,
-                settingsJson: settingsDefault as object,
+                role: 'Assistente de vendas e atendimento',
+                language: 'Português (BR)',
                 isActive: true,
             },
         });
+
+        // Default protocols
+        const defaultProtocols: Record<string, string> = {
+            human_contact_link:      'https://wa.me/',
+            human_handoff_consent:   'Posso te conectar com um humano. Deseja continuar?',
+            human_handoff_hostile:   'Aqui está o contato direto: {LINK}',
+            human_handoff_confirmed: 'Ótimo! Contato: {LINK}',
+            registration_link:       '',
+            respondi_form_link:      '',
+        };
+        for (const [key, value] of Object.entries(defaultProtocols)) {
+            await tx.agentProtocol.create({ data: { agentId: agent.id, key, value } });
+        }
 
         return tenant;
     });

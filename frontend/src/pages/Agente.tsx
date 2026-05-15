@@ -26,12 +26,25 @@ const EMPTY_PROGRAM: Omit<Program, 'id'> = {
 type AgentData = {
     id: string;
     name: string;
+    role: string;
+    language: string;
     isActive: boolean;
     whatsappNumber: string | null;
     geminiModel: string;
-    personaJson: { name: string; role: string; [k: string]: unknown };
-    programsJson: { programs: Program[] };
-    settingsJson: Record<string, unknown>;
+    // Relational lists (from new schema)
+    programs: Program[];
+    protocols: Record<string, string>;
+    restrictions: string[];
+    whitelistPhones: string[];
+    whitelistEnabled: boolean;
+    ignoreGroups: boolean;
+    adminChatEnabled: boolean;
+    ownerPhone: string | null;
+    // Editorial blobs
+    toneJson: unknown;
+    qualificationJson: unknown;
+    objectionHandlingJson: unknown;
+    knowledgeContractsJson: unknown;
 };
 
 const GEMINI_MODELS = [
@@ -264,52 +277,47 @@ export function Agente() {
 
     useEffect(() => {
         if (!agent) return;
-        const pj = agent.personaJson as any;
-        setPersonaName(pj?.name ?? agent.name ?? '');
-        setPersonaRole(pj?.role ?? '');
+        setPersonaName(agent.name ?? '');
+        setPersonaRole(agent.role ?? '');
         setWhatsapp(agent.whatsappNumber ?? '');
         setGeminiModel(agent.geminiModel ?? GEMINI_MODELS[0]);
-        setHumanLink(pj?.protocols?.human_contact_link ?? '');
-        setRegistrationLink(pj?.protocols?.registration_link ?? pj?.protocols?.respondi_form_link ?? '');
-        setRestrictions((pj?.absolute_restrictions as string[] ?? []).join('\n'));
-        setPrograms((agent.programsJson as any)?.programs ?? []);
+        setHumanLink(agent.protocols?.human_contact_link ?? '');
+        setRegistrationLink(agent.protocols?.registration_link ?? agent.protocols?.respondi_form_link ?? '');
+        setRestrictions((agent.restrictions ?? []).join('\n'));
+        setPrograms(agent.programs ?? []);
     }, [agent]);
 
-    const pj = agent?.personaJson as any;
     const personaDirty = agent ? (
-        personaName !== (pj?.name ?? agent.name) ||
-        personaRole !== (pj?.role ?? '') ||
+        personaName !== (agent.name ?? '') ||
+        personaRole !== (agent.role ?? '') ||
         whatsapp !== (agent.whatsappNumber ?? '') ||
         geminiModel !== agent.geminiModel
     ) : false;
 
     const protocolDirty = agent ? (
-        humanLink !== (pj?.protocols?.human_contact_link ?? '') ||
-        registrationLink !== (pj?.protocols?.registration_link ?? pj?.protocols?.respondi_form_link ?? '')
+        humanLink !== (agent.protocols?.human_contact_link ?? '') ||
+        registrationLink !== (agent.protocols?.registration_link ?? agent.protocols?.respondi_form_link ?? '')
     ) : false;
 
     const restrictionsDirty = agent ? (
-        restrictions !== (pj?.absolute_restrictions as string[] ?? []).join('\n')
+        restrictions !== (agent.restrictions ?? []).join('\n')
     ) : false;
 
     const updatePersona = useMutation({
         mutationFn: () => axios.patch('/api/agent/persona', {
-            personaJson: { name: personaName, role: personaRole },
+            name: personaName,
+            role: personaRole,
         }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['agent'] }),
     });
 
     const updateProtocol = useMutation({
         mutationFn: () => axios.patch('/api/agent/persona', {
-            personaJson: {
-                name: pj?.name ?? personaName,
-                role: pj?.role ?? personaRole,
-                protocols: {
-                    ...(pj?.protocols ?? {}),
-                    human_contact_link: humanLink.trim(),
-                    registration_link: registrationLink.trim(),
-                    respondi_form_link: registrationLink.trim(),
-                },
+            protocols: {
+                ...(agent?.protocols ?? {}),
+                human_contact_link: humanLink.trim(),
+                registration_link:  registrationLink.trim(),
+                respondi_form_link:  registrationLink.trim(),
             },
         }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['agent'] }),
@@ -317,18 +325,14 @@ export function Agente() {
 
     const updateRestrictions = useMutation({
         mutationFn: () => axios.patch('/api/agent/persona', {
-            personaJson: {
-                name: pj?.name ?? personaName,
-                role: pj?.role ?? personaRole,
-                absolute_restrictions: restrictions.split('\n').map(s => s.trim()).filter(Boolean),
-            },
+            absolute_restrictions: restrictions.split('\n').map(s => s.trim()).filter(Boolean),
         }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['agent'] }),
     });
 
     const updatePrograms = useMutation({
         mutationFn: (progs: typeof programs) =>
-            axios.patch('/api/agent/programs', { programsJson: { programs: progs } }),
+            axios.patch('/api/agent/programs', { programs: progs }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['agent'] }),
     });
 

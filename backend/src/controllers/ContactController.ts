@@ -11,13 +11,15 @@ type WhitelistSettings = {
 };
 
 async function getWhitelistSettings(tenantId: string): Promise<WhitelistSettings> {
-    const agent = await prisma.agent.findFirst({ where: { tenantId } });
-    const settings = (agent?.settingsJson as Record<string, unknown>) ?? {};
+    const agent = await prisma.agent.findFirst({
+        where: { tenantId },
+        include: { whitelistPhones: true, whitelistGroups: true },
+    });
     return {
-        enabled: (settings.whitelistEnabled as boolean) ?? false,
-        phones: (settings.allowedPhones as string[]) ?? [],
-        groupWhitelistEnabled: (settings.groupWhitelistEnabled as boolean) ?? false,
-        allowedGroups: (settings.allowedGroups as string[]) ?? [],
+        enabled:              agent?.whitelistEnabled ?? false,
+        phones:               agent?.whitelistPhones.map(w => w.phone) ?? [],
+        groupWhitelistEnabled: false, // managed per-agent, not tenant-level yet
+        allowedGroups:        agent?.whitelistGroups.map(w => w.groupId) ?? [],
     };
 }
 
@@ -124,24 +126,33 @@ export async function getWhitelist(req: AuthRequest, res: Response): Promise<Res
 }
 
 export async function updateWhitelist(req: AuthRequest, res: Response): Promise<Response> {
-    const { enabled, phones, groupWhitelistEnabled, allowedGroups } = req.body as {
-        enabled?: boolean; phones?: string[];
-        groupWhitelistEnabled?: boolean; allowedGroups?: string[];
+    const { enabled, phones, allowedGroups } = req.body as {
+        enabled?: boolean; phones?: string[]; allowedGroups?: string[];
     };
 
     const agent = await prisma.agent.findFirst({ where: { tenantId: req.tenantId } });
     if (!agent) return res.status(404).json({ error: 'Agente não encontrado' });
 
-    const existing = (agent.settingsJson as Record<string, unknown>) ?? {};
-    const updated = {
-        ...existing,
-        ...(enabled !== undefined ? { whitelistEnabled: enabled } : {}),
-        ...(phones !== undefined ? { allowedPhones: phones } : {}),
-        ...(groupWhitelistEnabled !== undefined ? { groupWhitelistEnabled } : {}),
-        ...(allowedGroups !== undefined ? { allowedGroups } : {}),
-    };
+    const data: Record<string, unknown> = {};
+    if (enabled !== undefined) data.whitelistEnabled = enabled;
+    if (Object.keys(data).length) {
+        await prisma.agent.update({ where: { id: agent.id }, data });
+    }
 
-    await prisma.agent.update({ where: { id: agent.id }, data: { settingsJson: updated } });
+    if (Array.isArray(phones)) {
+        await prisma.whitelistPhone.deleteMany({ where: { agentId: agent.id } });
+        for (const phone of phones) {
+            await prisma.whitelistPhone.create({ data: { agentId: agent.id, phone } });
+        }
+    }
+
+    if (Array.isArray(allowedGroups)) {
+        await prisma.whitelistGroup.deleteMany({ where: { agentId: agent.id } });
+        for (const groupId of allowedGroups) {
+            await prisma.whitelistGroup.create({ data: { agentId: agent.id, groupId } });
+        }
+    }
+
     return res.json({ ok: true });
 }
 
@@ -152,20 +163,22 @@ export async function addToWhitelist(req: AuthRequest, res: Response): Promise<R
     const agent = await prisma.agent.findFirst({ where: { tenantId: req.tenantId } });
     if (!agent) return res.status(404).json({ error: 'Agente não encontrado' });
 
-    const existing = (agent.settingsJson as Record<string, unknown>) ?? {};
-    const phones: string[] = [...new Set([...((existing.allowedPhones as string[]) ?? []), phone])];
-    await prisma.agent.update({ where: { id: agent.id }, data: { settingsJson: { ...existing, allowedPhones: phones } } });
+    await prisma.whitelistPhone.upsert({
+        where: { agentId_phone: { agentId: agent.id, phone } },
+        create: { agentId: agent.id, phone },
+        update: {},
+    });
+    const phones = (await prisma.whitelistPhone.findMany({ where: { agentId: agent.id } })).map(w => w.phone);
     return res.json({ ok: true, phones });
 }
 
 export async function removeFromWhitelist(req: AuthRequest, res: Response): Promise<Response> {
-    const { phone } = req.params;
+    const phone = decodeURIComponent(req.params.phone);
 
     const agent = await prisma.agent.findFirst({ where: { tenantId: req.tenantId } });
     if (!agent) return res.status(404).json({ error: 'Agente não encontrado' });
 
-    const existing = (agent.settingsJson as Record<string, unknown>) ?? {};
-    const phones = ((existing.allowedPhones as string[]) ?? []).filter(p => p !== decodeURIComponent(phone));
-    await prisma.agent.update({ where: { id: agent.id }, data: { settingsJson: { ...existing, allowedPhones: phones } } });
+    await prisma.whitelistPhone.deleteMany({ where: { agentId: agent.id, phone } });
+    const phones = (await prisma.whitelistPhone.findMany({ where: { agentId: agent.id } })).map(w => w.phone);
     return res.json({ ok: true, phones });
 }

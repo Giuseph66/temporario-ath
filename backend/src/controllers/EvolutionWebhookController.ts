@@ -94,7 +94,10 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
             return;
         }
 
-        const agent = await prisma.agent.findFirst({ where: { tenantId: tenant.id }, select: { id: true, settingsJson: true, isActive: true } }).catch(() => null);
+        const agent = await prisma.agent.findFirst({
+            where: { tenantId: tenant.id },
+            include: { whitelistPhones: true, whitelistGroups: true },
+        }).catch(() => null);
 
         // ── SALVA MENSAGEM SEMPRE (antes de qualquer filtro) ─────────────────
         // Garante que o lead e a mensagem existam no banco independente de
@@ -150,9 +153,8 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
         // ── SELF-MESSAGE: detecta quando o operador fala consigo mesmo ────────
         if (data?.key?.fromMe) {
             // Verifica se é mensagem para si mesmo (admin chat)
-            const agentSettings = (agent?.settingsJson as Record<string, unknown>) ?? {};
-            const adminEnabled = agentSettings.adminChatEnabled !== false;
-            const ownerPhone = agentSettings.ownerPhone as string | undefined;
+            const adminEnabled = agent?.adminChatEnabled !== false;
+            const ownerPhone = agent?.ownerPhone as string | undefined;
 
             const isSelfMessage = ownerPhone
                 ? phoneVariants(rawPhone).some(v => phoneVariants(ownerPhone).includes(v))
@@ -181,32 +183,25 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
 
         // ── GRUPOS: salvar sempre; responder só se ignoreGroups=false ─────────
         if (isGroup) {
-            const wl = (agent?.settingsJson as Record<string, unknown>) ?? {};
-            if (wl.ignoreGroups !== false) {
+            if (agent?.ignoreGroups !== false) {
                 log.webhook('info', 'Grupo: salvo, bot não responde (ignoreGroups=true)', { id: phoneNumber.slice(-6) });
                 return;
             }
-            // Whitelist de grupos: se habilitada, só responde grupos na lista
-            if (wl.groupWhitelistEnabled === true) {
-                const allowed: string[] = (wl.allowedGroups as string[]) ?? [];
-                if (!allowed.includes(phoneNumber)) {
-                    log.webhook('info', 'Grupo bloqueado pela whitelist (salvo, bot não responde)', { id: phoneNumber.slice(-6) });
-                    return;
-                }
+            const allowedGroups: string[] = agent?.whitelistGroups?.map((g: any) => g.groupId) ?? [];
+            if (allowedGroups.length > 0 && !allowedGroups.includes(phoneNumber)) {
+                log.webhook('info', 'Grupo bloqueado pela whitelist', { id: phoneNumber.slice(-6) });
+                return;
             }
         }
 
         // ── WHITELIST: decide se bot responde (não impede salvar) ─────────────
-        if (agent) {
-            const wl = (agent.settingsJson as Record<string, unknown>) ?? {};
-            if (wl.whitelistEnabled === true) {
-                const allowed: string[] = (wl.allowedPhones as string[]) ?? [];
-                if (!allowed.includes(phoneNumber)) {
-                    log.webhook('info', 'Whitelist: contato bloqueado (mensagem salva, bot não responde)', {
-                        phone: phoneNumber.slice(0, 4) + '****',
-                    });
-                    return;
-                }
+        if (agent?.whitelistEnabled) {
+            const allowed: string[] = agent?.whitelistPhones?.map((w: any) => w.phone) ?? [];
+            if (!allowed.includes(phoneNumber)) {
+                log.webhook('info', 'Whitelist: contato bloqueado (mensagem salva, bot não responde)', {
+                    phone: phoneNumber.slice(0, 4) + '****',
+                });
+                return;
             }
         }
 

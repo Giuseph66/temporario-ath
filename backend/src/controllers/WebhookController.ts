@@ -15,15 +15,15 @@ const metaWhatsapp = new WhatsAppService();
 async function sendReply(tenantId: string | undefined, to: string, text: string): Promise<void> {
     // Whitelist enforced at send level — nada sai sem passar por aqui
     if (tenantId) {
-        const agent = await prisma.agent.findFirst({ where: { tenantId }, select: { settingsJson: true } }).catch(() => null);
-        if (agent) {
-            const settings = (agent.settingsJson as Record<string, unknown>) ?? {};
-            if (settings.whitelistEnabled === true) {
-                const allowed: string[] = (settings.allowedPhones as string[]) ?? [];
-                if (!allowed.includes(to)) {
-                    console.log(`[sendReply] BLOQUEADO — ${to.slice(0, 4)}**** não está na whitelist. Mensagem não enviada.`);
-                    return;
-                }
+        const agent = await prisma.agent.findFirst({
+            where: { tenantId },
+            include: { whitelistPhones: true },
+        }).catch(() => null);
+        if (agent?.whitelistEnabled) {
+            const allowed: string[] = agent.whitelistPhones?.map((w: any) => w.phone) ?? [];
+            if (!allowed.includes(to)) {
+                console.log(`[sendReply] BLOQUEADO — ${to.slice(0, 4)}**** não está na whitelist.`);
+                return;
             }
         }
     }
@@ -74,13 +74,13 @@ export function scheduleProcessing(from: string, text: string, tenantId?: string
 // Returns the text that was sent (so it can be saved to history).
 async function getProtocols(tenantId?: string): Promise<Record<string, string>> {
     if (tenantId) {
-        const agent = await prisma.agent.findFirst({ where: { tenantId }, select: { personaJson: true } }).catch(() => null);
-        if (agent?.personaJson) {
-            const p = (agent.personaJson as Record<string, unknown>).protocols as Record<string, string> | undefined;
-            if (p && Object.keys(p).length > 0) return p;
+        const rows = await prisma.agentProtocol.findMany({
+            where: { agent: { tenantId } },
+        }).catch(() => []);
+        if (rows.length > 0) {
+            return Object.fromEntries(rows.map(r => [r.key, r.value]));
         }
     }
-    // Fallback para arquivo enquanto DB não tiver os protocolos migrados
     return configLoader.getConfig().persona.protocols as unknown as Record<string, string>;
 }
 
@@ -261,34 +261,13 @@ async function processMessages(from: string, messageBody: string, tenantId?: str
             return; // ← skip AI generation entirely
         }
 
-        // ── 8. Build the system prompt — lê 100% do banco ────────────────────
-        const fileConfig = configLoader.getConfig(); // fallback para campos não migrados ainda
-        let config = fileConfig;
-
+        // ── 8. Build the system prompt — 100% do banco via agentToConfig ────────
+        const fileConfig = configLoader.getConfig(); // fallback para campos não migrados
+        const { getAgentFull, agentToConfig } = await import('../utils/agentQuery');
         const dbAgent = session.tenantId
-            ? await prisma.agent.findFirst({ where: { tenantId: session.tenantId } }).catch(() => null)
+            ? await getAgentFull({ tenantId: session.tenantId })
             : null;
-
-        if (dbAgent) {
-            const dbPersona = (dbAgent.personaJson as Record<string, unknown>) ?? {};
-            const dbPrograms = (dbAgent.programsJson as { programs?: unknown[] })?.programs ?? [];
-            const dbSettings = (dbAgent.settingsJson as Record<string, unknown>) ?? {};
-
-            config = {
-                persona: {
-                    name: String(dbPersona.name ?? fileConfig.persona.name),
-                    role: String(dbPersona.role ?? fileConfig.persona.role),
-                    language: String(dbPersona.language ?? fileConfig.persona.language ?? 'pt-BR'),
-                    absolute_restrictions: (dbPersona.absolute_restrictions as string[]) ?? fileConfig.persona.absolute_restrictions ?? [],
-                    tone: { ...(fileConfig.persona.tone as object), ...((dbPersona.tone as object) ?? {}) },
-                    protocols: { ...(fileConfig.persona.protocols as object), ...((dbPersona.protocols as object) ?? {}) },
-                } as any,
-                programs: dbPrograms.length
-                    ? { programs: dbPrograms as any[] }
-                    : fileConfig.programs,
-                settings: { ...fileConfig.settings, ...dbSettings } as any,
-            };
-        }
+        const config = agentToConfig(dbAgent, fileConfig);
 
         // RAG — retrieve relevant context from knowledge base (non-blocking)
         const ragContext = session.tenantId

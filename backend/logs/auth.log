@@ -19,3 +19,10 @@
 {"ts":"2026-05-14T19:01:14.255Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
 {"ts":"2026-05-14T19:29:32.507Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
 {"ts":"2026-05-14T19:44:20.216Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
+{"ts":"2026-05-14T19:46:08.056Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
+{"ts":"2026-05-14T23:35:38.476Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
+{"ts":"2026-05-14T23:40:41.099Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
+{"ts":"2026-05-14T23:55:11.882Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
+{"ts":"2026-05-14T23:58:29.616Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
+{"ts":"2026-05-14T23:58:44.201Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
+{"ts":"2026-05-15T00:41:14.323Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}

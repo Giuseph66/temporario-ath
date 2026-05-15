@@ -50,17 +50,114 @@ model TenantUser {
 model Agent {
   id             String   @id @default(uuid())
   tenantId       String
-  name           String
-  personaJson    Json
-  programsJson   Json
-  settingsJson   Json
-  geminiModel    String   @default("gemini-2.5-flash-preview-05-20")
+
+  // ─── Persona (scalar fields) ────────────────────────────────────────────────
+  name           String                        // Nome do agente (ex: "Artemis")
+  role           String   @default("") @db.Text // Instrução de papel / system prompt base
+  language       String   @default("Português (BR)")
+  geminiModel    String   @default("gemini-2.5-flash")
   isActive       Boolean  @default(true)
   whatsappNumber String?
-  createdAt      DateTime @default(now())
 
-  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // ─── Persona (editorial blobs — semi-structured, não precisam de join) ──────
+  toneJson               Json?  // { primary: string[], formatting, ai_identity, emoji_rules }
+  qualificationJson      Json?  // string[] — regras de qualificação do lead
+  objectionHandlingJson  Json?  // { tactics, layer_1_soft, layer_2_medium, layer_3_direct }
+  knowledgeContractsJson Json?  // { rules, bonuses, evolution }
+
+  // ─── Settings (scalar) ──────────────────────────────────────────────────────
+  whitelistEnabled        Boolean @default(false)
+  ignoreGroups            Boolean @default(true)
+  adminChatEnabled        Boolean @default(true)
+  ownerPhone              String?
+  humanSupportNumber      String?
+  humanHandoffMessage     String? @db.Text
+  humanNotificationNumber String?
+
+  // ─── Campos legados — mantidos nullable durante transição ───────────────────
+  personaJson    Json?
+  programsJson   Json?
+  settingsJson   Json?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   leads          User[]
+  programs       AgentProgram[]
+  protocols      AgentProtocol[]
+  restrictions   AgentRestriction[]
+  whitelistPhones WhitelistPhone[]
+  whitelistGroups WhitelistGroup[]
+}
+
+// ─── Programas do agente ──────────────────────────────────────────────────────
+model AgentProgram {
+  id            String   @id @default(uuid())
+  agentId       String
+  programKey    String                   // slug único (ex: "ingles_personalizado")
+  name          String
+  priceValue    Float    @default(0)
+  priceType     String   @default("monthly") // monthly | per_session
+  installments  Int      @default(1)
+  durationWeeks Int      @default(0)
+  verbatimIntro String   @default("") @db.Text
+  fullText      String   @default("") @db.Text
+  sortOrder     Int      @default(0)
+
+  agent         Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, programKey])
+  @@index([agentId])
+}
+
+// ─── Protocolos do agente (key/value) ─────────────────────────────────────────
+model AgentProtocol {
+  id      String @id @default(uuid())
+  agentId String
+  key     String
+  value   String @db.Text
+
+  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, key])
+  @@index([agentId])
+}
+
+// ─── Restrições absolutas do agente ──────────────────────────────────────────
+model AgentRestriction {
+  id        String @id @default(uuid())
+  agentId   String
+  text      String @db.Text
+  sortOrder Int    @default(0)
+
+  agent     Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+}
+
+// ─── Whitelist de contatos individuais ───────────────────────────────────────
+model WhitelistPhone {
+  id      String @id @default(uuid())
+  agentId String
+  phone   String
+
+  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, phone])
+  @@index([agentId])
+}
+
+// ─── Whitelist de grupos ──────────────────────────────────────────────────────
+model WhitelistGroup {
+  id      String @id @default(uuid())
+  agentId String
+  groupId String
+
+  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, groupId])
+  @@index([agentId])
 }
 
 // ─── Controle de idempotência do webhook Asaas ────────────────────────────────

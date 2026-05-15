@@ -35,3 +35,7 @@
 {"ts":"2026-05-14T19:41:11.025Z","level":"info","category":"system","msg":"Servidor iniciado na porta 3001","data":{"port":"3001","env":"development"}}
 {"ts":"2026-05-14T19:41:32.931Z","level":"info","category":"system","msg":"Servidor iniciado na porta 3001","data":{"port":"3001","env":"development"}}
 {"ts":"2026-05-14T19:41:52.271Z","level":"info","category":"system","msg":"Servidor iniciado na porta 3001","data":{"port":"3001","env":"development"}}
+{"ts":"2026-05-14T23:35:22.807Z","level":"info","category":"system","msg":"Servidor iniciado na porta 3001","data":{"port":"3001","env":"development"}}
+{"ts":"2026-05-14T23:36:27.027Z","level":"info","category":"system","msg":"Servidor iniciado na porta 3001","data":{"port":"3001","env":"development"}}
+{"ts":"2026-05-14T23:37:22.567Z","level":"info","category":"system","msg":"Servidor iniciado na porta 3001","data":{"port":"3001","env":"development"}}
+{"ts":"2026-05-14T23:53:54.577Z","level":"info","category":"system","msg":"Servidor iniciado na porta 3001","data":{"port":"3001","env":"development"}}
