@@ -1,19 +1,9 @@
 import axios, { AxiosError } from 'axios';
 import dotenv from 'dotenv';
+import { prisma } from '../utils/prisma';
 
 dotenv.config();
 
-/**
- * AsaasService — Integração com a API do Asaas
- *
- * Responsável por:
- * 1. Buscar ou criar um cliente no Asaas pelo CPF.
- * 2. Gerar link de cobrança:
- *    - Programas mensais (installments > 1): cria uma assinatura recorrente via /subscriptions
- *      e retorna o invoiceUrl da primeira cobrança gerada.
- *    - Sessão avulsa (installments = 1): cria uma cobrança única via /payments.
- * 3. Cancelar cobranças: cancela assinaturas ativas e cobranças individuais pendentes.
- */
 class AsaasService {
     private readonly apiKey: string;
     private readonly baseUrl: string;
@@ -32,6 +22,7 @@ class AsaasService {
         return {
             'access_token': this.apiKey,
             'Content-Type': 'application/json',
+            'User-Agent': 'ArtemisBot/1.0',
         };
     }
 
@@ -93,6 +84,19 @@ class AsaasService {
         const newCustomerId = createResponse.data.id;
         console.log(`🆕 [AsaasService] Cliente criado: ${newCustomerId}`);
         return newCustomerId;
+    }
+
+    async ensureCustomer(name: string, cpf: string, phone: string, existingCustomerId?: string | null): Promise<string> {
+        if (existingCustomerId) {
+            try {
+                await axios.get(`${this.baseUrl}/customers/${existingCustomerId}`, { headers: this.headers });
+                return existingCustomerId;
+            } catch {
+                console.warn(`⚠️ [AsaasService] Cliente salvo inválido no Asaas atual: ${existingCustomerId}. Recriando/buscando por CPF.`);
+            }
+        }
+
+        return this.getOrCreateCustomer(name, cpf, phone);
     }
 
     /**
@@ -198,6 +202,69 @@ class AsaasService {
         return invoiceUrl;
     }
 
+    /** Lista cobranças com filtros opcionais */
+    async listPayments(params: Record<string, any> = {}): Promise<any> {
+        const response = await axios.get(`${this.baseUrl}/payments`, {
+            headers: this.headers,
+            params: { limit: 20, ...params },
+        }).catch(e => this.handleAxiosError('listar cobranças', e));
+        return response.data;
+    }
+
+    /** Cria uma cobrança avulsa (sem assinatura) */
+    async createPayment(data: {
+        customer: string;
+        billingType: string;
+        value: number;
+        dueDate: string;
+        description?: string;
+        externalReference?: string;
+    }): Promise<any> {
+        const response = await axios.post(`${this.baseUrl}/payments`, data, { headers: this.headers })
+            .catch(e => this.handleAxiosError('criar cobrança', e));
+        return response.data;
+    }
+
+    /** Atualiza uma cobrança existente */
+    async updatePayment(paymentId: string, data: {
+        value?: number;
+        dueDate?: string;
+        description?: string;
+        billingType?: string;
+    }): Promise<any> {
+        const response = await axios.put(`${this.baseUrl}/payments/${paymentId}`, data, { headers: this.headers })
+            .catch(e => this.handleAxiosError('atualizar cobrança', e));
+        return response.data;
+    }
+
+    /** Lista clientes com filtros opcionais */
+    async listCustomers(params: Record<string, any> = {}): Promise<any> {
+        const response = await axios.get(`${this.baseUrl}/customers`, {
+            headers: this.headers,
+            params: { limit: 20, ...params },
+        }).catch(e => this.handleAxiosError('listar clientes', e));
+        return response.data;
+    }
+
+    /** Cria um cliente diretamente (sem upsert) */
+    async createCustomer(data: {
+        name: string;
+        cpfCnpj?: string;
+        email?: string;
+        mobilePhone?: string;
+    }): Promise<any> {
+        const response = await axios.post(`${this.baseUrl}/customers`, data, { headers: this.headers })
+            .catch(e => this.handleAxiosError('criar cliente', e));
+        return response.data;
+    }
+
+    /** Cancela uma cobrança pelo ID */
+    async cancelPayment(paymentId: string): Promise<any> {
+        const response = await axios.post(`${this.baseUrl}/payments/${paymentId}/cancel`, {}, { headers: this.headers })
+            .catch(e => this.handleAxiosError('cancelar cobrança', e));
+        return response.data;
+    }
+
     /**
      * Cancela todas as cobranças ativas de um cliente no Asaas:
      * 1. Cancela assinaturas recorrentes ativas (via DELETE /subscriptions/{id}).
@@ -251,3 +318,15 @@ class AsaasService {
 }
 
 export const asaasService = new AsaasService();
+
+/** Retorna uma instância do AsaasService com as chaves do tenant específico */
+export async function asaasServiceForTenant(tenantId: string): Promise<AsaasService> {
+    const tenant = await prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { asaasApiKey: true, asaasBaseUrl: true },
+    });
+    if (tenant?.asaasApiKey) {
+        return new AsaasService(tenant.asaasApiKey, tenant.asaasBaseUrl ?? undefined);
+    }
+    return asaasService;
+}

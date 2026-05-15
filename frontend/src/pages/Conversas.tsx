@@ -23,6 +23,7 @@ type LeadDetail = {
     enrollmentStatus: string;
     lastInteraction: string;
     interactionCount: number;
+    isGroup: boolean;
     age?: number | null;
     goal?: string | null;
     currentProgramId?: string | null;
@@ -31,7 +32,7 @@ type LeadDetail = {
     lgpdConsent: boolean;
     asaasCustomerId?: string | null;
     lastPaymentUrl?: string | null;
-    messages: { id: string; role: string; content: string; createdAt: string }[];
+    messages: { id: string; role: string; content: string; createdAt: string; trace?: { toolsUsed: string[]; state: string; modelId: string; programsInjected?: { key: string; name: string; price: number }[]; ragUsed?: { chars: number; snippet: string } | null } | null }[];
 };
 
 // ─── Mock data (used when no real conversations exist) ────────────────────────
@@ -45,6 +46,7 @@ const STATE_META: Record<string, { label: string; color: string; bg: string; des
     OBJECTION_HANDLING:   { label: 'Objeções',       color: '#b45309', bg: '#fef3c7', desc: 'Respondendo dúvidas e objeções' },
     CLOSING:              { label: 'Fechamento',      color: '#3d7a5e', bg: '#e8f0ec', desc: 'Enviando link de pagamento' },
     HUMAN_HANDOFF:        { label: 'Atendimento humano', color: '#dc2626', bg: '#fef2f2', desc: 'Transferido para equipe humana' },
+    ORIENTADOR:           { label: 'Orientador',      color: '#0f766e', bg: '#ccfbf1', desc: 'Assistente interno do sistema' },
 };
 
 const ENROLLMENT_META: Record<string, { label: string; color: string; bg: string }> = {
@@ -269,6 +271,152 @@ function EditableName({ name, onSave }: { name: string | null; onSave: (v: strin
     );
 }
 
+// ─── Tool metadata ─────────────────────────────────────────────────────────────
+
+const TOOL_META: Record<string, { label: string; icon: string; color: string }> = {
+    check_available_slots:  { label: 'Verificar disponibilidade', icon: '📅', color: '#0891b2' },
+    create_appointment:     { label: 'Criar agendamento',          icon: '✅', color: '#3d7a5e' },
+    find_appointments:      { label: 'Buscar agendamentos',        icon: '🔍', color: '#6366f1' },
+    cancel_appointment:     { label: 'Cancelar agendamento',       icon: '🗑️', color: '#b45309' },
+    generate_payment:       { label: 'Gerar cobrança',             icon: '💳', color: '#7c3aed' },
+    cancel_asaas_payment:   { label: 'Cancelar cobrança',          icon: '🚫', color: '#dc2626' },
+    admin_check_calendar_availability: { label: 'Verificar agenda', icon: '📅', color: '#0891b2' },
+    admin_create_calendar_event:       { label: 'Criar evento',     icon: '✅', color: '#3d7a5e' },
+    admin_find_calendar_events:         { label: 'Buscar eventos',   icon: '🔍', color: '#6366f1' },
+    admin_cancel_calendar_event:        { label: 'Cancelar evento',  icon: '🗑️', color: '#b45309' },
+    admin_create_asaas_customer:        { label: 'Criar cliente Asaas', icon: '👤', color: '#0f766e' },
+    admin_list_asaas_customers:         { label: 'Listar clientes Asaas', icon: '📋', color: '#0891b2' },
+    admin_create_asaas_payment:         { label: 'Criar cobrança Asaas', icon: '💳', color: '#7c3aed' },
+    admin_list_asaas_payments:          { label: 'Listar cobranças Asaas', icon: '📄', color: '#b45309' },
+    admin_update_asaas_payment:         { label: 'Atualizar cobrança Asaas', icon: '✏️', color: '#7c3aed' },
+};
+
+type TraceData = { toolsUsed: string[]; state: string; modelId: string; programsInjected?: { key: string; name: string; price: number }[]; ragUsed?: { chars: number; snippet: string } | null };
+
+function TraceModal({ trace, onClose }: { trace: TraceData; onClose: () => void }) {
+    return (
+        <div
+            onClick={onClose}
+            style={{
+                position: 'fixed', inset: 0, zIndex: 1000,
+                background: 'rgba(0,0,0,.45)', backdropFilter: 'blur(2px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+        >
+            <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                    background: 'var(--paper)', borderRadius: 16,
+                    border: '1px solid var(--line)', boxShadow: '0 24px 64px rgba(0,0,0,.18)',
+                    width: 440, maxWidth: '90vw', padding: '24px 28px',
+                    display: 'flex', flexDirection: 'column', gap: 18,
+                }}
+            >
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: 'var(--ink-1)' }}>
+                        Trace da resposta
+                    </div>
+                    <button
+                        onClick={onClose}
+                        style={{ width: 28, height: 28, borderRadius: '50%', border: '1px solid var(--line)', background: 'var(--paper-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--ink-4)' }}
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                {/* Badges */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#eef2ff', color: '#6366f1', border: '1px solid #c7d2fe' }}>
+                        {trace.modelId}
+                    </span>
+                    {(() => {
+                        const meta = STATE_META[trace.state];
+                        return meta ? (
+                            <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, padding: '3px 10px', borderRadius: 20, background: meta.bg, color: meta.color, border: `1px solid ${meta.color}33` }}>
+                                {meta.label}
+                            </span>
+                        ) : (
+                            <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, padding: '3px 10px', borderRadius: 20, background: 'var(--paper-3)', color: 'var(--ink-4)' }}>
+                                {trace.state}
+                            </span>
+                        );
+                    })()}
+                </div>
+
+                {/* Divider */}
+                <div style={{ height: 1, background: 'var(--line)' }} />
+
+                {/* Tools */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9.5, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--ink-5)' }}>
+                        Ferramentas chamadas
+                    </div>
+                    {trace.toolsUsed.length > 0 ? trace.toolsUsed.map(tool => {
+                        const meta = TOOL_META[tool] ?? { label: tool, icon: '🔧', color: '#555' };
+                        return (
+                            <div key={tool} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, background: 'var(--paper-2)', border: '1px solid var(--line)' }}>
+                                <span style={{ fontSize: 18 }}>{meta.icon}</span>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 600, color: meta.color }}>{meta.label}</div>
+                                    <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'var(--ink-5)', marginTop: 1 }}>{tool}</div>
+                                </div>
+                            </div>
+                        );
+                    }) : (
+                        <div style={{ padding: '12px 14px', borderRadius: 10, background: 'var(--paper-2)', border: '1px solid var(--line)', fontSize: 13, color: 'var(--ink-4)', fontStyle: 'italic' }}>
+                            Sem ferramentas — resposta direta do modelo.
+                        </div>
+                    )}
+                </div>
+
+                {/* Programs injected */}
+                {trace.programsInjected && trace.programsInjected.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ height: 1, background: 'var(--line)' }} />
+                        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9.5, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--ink-5)' }}>
+                            Programas no contexto ({trace.programsInjected.length})
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 180, overflowY: 'auto' }}>
+                            {trace.programsInjected.map(p => (
+                                <div key={p.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', borderRadius: 8, background: 'var(--paper-2)', border: '1px solid var(--line)' }}>
+                                    <span style={{ fontSize: 12.5, color: 'var(--ink-2)', fontWeight: 500 }}>{p.name}</span>
+                                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'var(--accent-ink)' }}>
+                                        R$ {p.price?.toLocaleString('pt-BR') ?? '—'}/mês
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* RAG context */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ height: 1, background: 'var(--line)' }} />
+                    <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9.5, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--ink-5)' }}>
+                        Contexto RAG
+                    </div>
+                    {trace.ragUsed ? (
+                        <div style={{ padding: '10px 14px', borderRadius: 10, background: '#fef3c7', border: '1px solid #fbbf24' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: '#92400e' }}>RAG ativo</span>
+                                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: '#b45309' }}>{trace.ragUsed.chars.toLocaleString()} chars</span>
+                            </div>
+                            <div style={{ fontSize: 11.5, color: '#78350f', lineHeight: 1.5, fontStyle: 'italic', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                "{trace.ragUsed.snippet}{trace.ragUsed.chars > 300 ? '…' : ''}"
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--paper-2)', border: '1px solid var(--line)', fontSize: 13, color: 'var(--ink-4)', fontStyle: 'italic' }}>
+                            Sem contexto RAG — base de conhecimento não consultada.
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function Conversas() {
@@ -277,6 +425,7 @@ export function Conversas() {
     const [search, setSearch] = useState('');
     const [tab, setTab] = useState<'contacts' | 'groups'>('contacts');
     const [msgText, setMsgText] = useState('');
+    const [traceModal, setTraceModal] = useState<TraceData | null>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
     const { data: list = [], isLoading: listLoading } = useQuery<ConversaItem[]>({
@@ -344,7 +493,10 @@ export function Conversas() {
     const groupCount = list.filter(c => c.isGroup).length;
     const contactCount = list.filter(c => !c.isGroup).length;
 
-    const transitions = detail ? inferStateTransitions(detail.messages) : [];
+    // Backend retorna desc (mais recente primeiro), reverter para ordem cronológica
+    const sortedMessages = detail ? [...detail.messages].reverse() : [];
+
+    const transitions = detail ? inferStateTransitions(sortedMessages) : [];
 
     // Build annotated message list with state transition markers
     type MsgOrTransition =
@@ -354,7 +506,7 @@ export function Conversas() {
     const annotated: MsgOrTransition[] = [];
     if (detail) {
         const transitionByIndex = new Map(transitions.map(t => [t.msgIndex, t.state]));
-        detail.messages.forEach((msg, i) => {
+        sortedMessages.forEach((msg, i) => {
             const t = transitionByIndex.get(i);
             if (t) annotated.push({ type: 'transition', state: t, idx: i });
             annotated.push({ type: 'msg', msg, idx: i });
@@ -362,6 +514,7 @@ export function Conversas() {
     }
 
     return (
+        <>
         <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
 
             {/* ── 1. Conversation list ── */}
@@ -509,20 +662,28 @@ export function Conversas() {
                                 const isRight = isAgent || isOperator;
                                 const isUrl = msg.content.startsWith('http');
 
+                                const hasTrace = isAgent && msg.trace;
+                                const isOrientador = msg.trace?.state === 'ORIENTADOR';
+
                                 return (
                                     <div key={msg.id} style={{ display: 'flex', flexDirection: isRight ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8, marginBottom: 4 }}>
                                         {isRight && (
-                                            <div style={{ width: 26, height: 26, borderRadius: '50%', background: isOperator ? '#6366f1' : 'var(--accent)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Fraunces', serif", fontSize: 11, color: '#fff' }}>
-                                                {isOperator ? 'Op' : 'A'}
+                                            <div style={{ width: 26, height: 26, borderRadius: '50%', background: isOperator ? '#6366f1' : isOrientador ? '#0f766e' : 'var(--accent)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Fraunces', serif", fontSize: 11, color: '#fff' }}>
+                                                {isOperator ? 'Op' : isOrientador ? 'O' : 'A'}
                                             </div>
                                         )}
-                                        <div style={{
-                                            maxWidth: '68%',
-                                            background: isOperator ? '#eef2ff' : isAgent ? 'var(--ink-1)' : isUrl ? 'var(--paper-2)' : 'var(--paper)',
-                                            border: `1px solid ${isOperator ? '#c7d2fe' : isAgent ? 'transparent' : 'var(--line)'}`,
-                                            borderRadius: isRight ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                                            padding: '10px 14px',
-                                        }}>
+                                        <div
+                                            onClick={() => hasTrace && msg.trace && setTraceModal(msg.trace)}
+                                            style={{
+                                                maxWidth: '68%',
+                                                background: isOperator ? '#eef2ff' : isAgent ? 'var(--ink-1)' : isUrl ? 'var(--paper-2)' : 'var(--paper)',
+                                                border: `1px solid ${isOperator ? '#c7d2fe' : isAgent ? (hasTrace ? 'rgba(99,102,241,.35)' : 'transparent') : 'var(--line)'}`,
+                                                borderRadius: isRight ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                                                padding: '10px 14px',
+                                                cursor: hasTrace ? 'pointer' : 'default',
+                                            }}
+                                            title={hasTrace ? 'Clique para ver trace' : undefined}
+                                        >
                                             {isUrl ? (
                                                 <a href={msg.content} target="_blank" rel="noreferrer" style={{ fontFamily: "'Geist Mono', monospace", fontSize: 12, color: 'var(--accent-ink)', wordBreak: 'break-all', textDecoration: 'underline' }}>
                                                     {msg.content}
@@ -534,6 +695,8 @@ export function Conversas() {
                                             )}
                                             <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9.5, color: isAgent ? 'rgba(241,236,220,.45)' : 'var(--ink-5)', marginTop: 5, textAlign: 'right', display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
                                                 {isOperator && <span style={{ color: '#6366f1', fontSize: 9 }}>operador</span>}
+                                                {isOrientador && <span style={{ color: '#5eead4', fontSize: 9 }}>orientador</span>}
+                                                {hasTrace && <span style={{ fontSize: 9, opacity: .6 }}>🔍</span>}
                                                 {formatTime(msg.createdAt)}
                                             </div>
                                         </div>
@@ -700,5 +863,8 @@ export function Conversas() {
                 </div>
             )}
         </div>
+
+        {traceModal && <TraceModal trace={traceModal} onClose={() => setTraceModal(null)} />}
+        </>
     );
 }

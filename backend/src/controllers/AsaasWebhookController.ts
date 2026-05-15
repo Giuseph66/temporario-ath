@@ -1,26 +1,44 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import { WhatsAppService } from '../services/WhatsAppService';
+import { EvolutionService } from '../services/EvolutionService';
 
 const whatsapp = new WhatsAppService();
+
+async function sendAsaasNotification(tenantId: string | null, phone: string, text: string): Promise<void> {
+    if (tenantId) {
+        const tenant = await prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { evolutionInstance: true },
+        }).catch(() => null);
+        if (tenant?.evolutionInstance) {
+            await EvolutionService.sendText(tenant.evolutionInstance, phone, text);
+            return;
+        }
+    }
+    await whatsapp.sendText(phone, text);
+}
 
 export const handleAsaasWebhook = async (req: Request, res: Response): Promise<void> => {
     const receivedToken = req.headers['asaas-access-token'] as string | undefined;
 
-    // Validação: aceita token do ENV (global) ou do banco por tenant (multi-tenant)
-    // Tenta primeiro o ENV como fallback universal
+    // Valida token: primeiro ENV global, depois lookup por tenant
     const globalSecret = process.env.ASAAS_WEBHOOK_SECRET;
     const matchesGlobal = globalSecret && receivedToken === globalSecret;
+    let resolvedTenantId: string | null = null;
 
     if (!matchesGlobal) {
-        // Tenta encontrar tenant com esse webhookSecret no banco
         const tenantMatch = receivedToken
-            ? await prisma.tenant.findFirst({ where: { asaasWebhookSecret: receivedToken } })
+            ? await prisma.tenant.findFirst({
+                where: { asaasWebhookSecret: receivedToken },
+                select: { id: true },
+              })
             : null;
         if (!tenantMatch) {
             res.status(401).json({ error: 'Unauthorized' });
             return;
         }
+        resolvedTenantId = tenantMatch.id;
     }
 
     // Passo 06 — Validação mínima do payload
@@ -60,7 +78,8 @@ export const handleAsaasWebhook = async (req: Request, res: Response): Promise<v
         }
 
         const user = await prisma.user.findFirst({
-            where: { asaasCustomerId }
+            where: { asaasCustomerId },
+            select: { id: true, phoneNumber: true, name: true, tenantId: true },
         });
 
         if (!user || !user.phoneNumber) {
@@ -68,7 +87,9 @@ export const handleAsaasWebhook = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        // Passo 19 — Atualizar status de matrícula no banco
+        const effectiveTenantId = resolvedTenantId ?? user.tenantId;
+
+        // Atualizar status de matrícula no banco
         await prisma.user.update({
             where: { id: user.id },
             data: {
@@ -87,11 +108,11 @@ export const handleAsaasWebhook = async (req: Request, res: Response): Promise<v
         const confirmationMessage =
             `✅ *Pagamento confirmado!*\n\n` +
             `Olá${studentName}! Recebemos o seu pagamento de *${valueFormatted}* com sucesso. 🎉\n\n` +
-            `Sua matrícula está confirmada! Em breve a nossa equipe da Confluence entrará em contato para alinhar os próximos passos da sua jornada.\n\n` +
+            `Sua matrícula está confirmada! Em breve entraremos em contato para alinhar os próximos passos.\n\n` +
             `Seja muito bem-vindo(a)! 🚀`;
 
-        await whatsapp.sendText(user.phoneNumber, confirmationMessage);
-        console.log(`📲 [AsaasWebhook] Confirmação enviada. Status atualizado para ENROLLED.`);
+        await sendAsaasNotification(effectiveTenantId, user.phoneNumber, confirmationMessage);
+        console.log(`📲 [AsaasWebhook] Confirmação enviada via ${effectiveTenantId ? 'Evolution' : 'Meta'}. Status: ENROLLED.`);
 
     } catch (error) {
         console.error('❌ [AsaasWebhook] Erro ao processar evento:', error);

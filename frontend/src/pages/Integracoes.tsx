@@ -1,10 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
 type IntegrationStatus = {
     asaas: { configured: boolean; baseUrl: string; sandbox: boolean; apiKey: string | null; webhookSecret: string | null };
-    calendar: { configured: boolean; calendarId: string | null };
+    calendar: {
+        configured: boolean;
+        connected: boolean;
+        status: 'CONNECTED' | 'ERROR' | 'REVOKED' | 'EXPIRED';
+        email: string | null;
+        connectedAt: string | null;
+        revokedAt: string | null;
+        message: string | null;
+    };
 };
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
@@ -67,20 +75,53 @@ function FieldRow({ label, hint, children }: { label: string; hint?: string; chi
     );
 }
 
-function SecretField({ savedMask, onSave, placeholder = 'Cole aqui…' }: {
+function EyeIcon({ open }: { open: boolean }) {
+    return open ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+        </svg>
+    ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+        </svg>
+    );
+}
+
+function SecretField({ savedMask, onSave, revealField, placeholder = 'Cole aqui…' }: {
     savedMask: string | null;
     onSave: (val: string) => Promise<void>;
+    revealField?: string;
     placeholder?: string;
 }) {
     const [editing, setEditing] = useState(false);
     const [value, setValue] = useState('');
     const [saving, setSaving] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [visible, setVisible] = useState(true);
+
+    async function startEdit() {
+        setEditing(true);
+        if (revealField && savedMask) {
+            setLoading(true);
+            try {
+                const res = await axios.get<{ value: string | null }>('/api/integrations/reveal', { params: { field: revealField } });
+                setValue(res.data.value ?? '');
+            } catch {
+                setValue('');
+            } finally {
+                setLoading(false);
+            }
+        }
+    }
 
     async function handleSave() {
         if (!value.trim()) return;
         setSaving(true);
         await onSave(value.trim());
-        setValue(''); setEditing(false); setSaving(false);
+        setValue(''); setEditing(false); setSaving(false); setVisible(true);
     }
 
     if (!editing) {
@@ -96,10 +137,10 @@ function SecretField({ savedMask, onSave, placeholder = 'Cole aqui…' }: {
                         }}>
                             <CheckIcon /> configurada
                         </span>
-                        <button onClick={() => setEditing(true)} style={btnStyle}>Trocar</button>
+                        <button onClick={startEdit} style={btnStyle}>Editar</button>
                     </div>
                 ) : (
-                    <button onClick={() => setEditing(true)} style={{ ...btnStyle, borderColor: 'var(--accent-ink)', color: 'var(--accent-ink)' }}>
+                    <button onClick={startEdit} style={{ ...btnStyle, borderColor: 'var(--accent-ink)', color: 'var(--accent-ink)' }}>
                         Configurar
                     </button>
                 )}
@@ -109,51 +150,37 @@ function SecretField({ savedMask, onSave, placeholder = 'Cole aqui…' }: {
 
     return (
         <div style={{ display: 'flex', gap: 8 }}>
-            <input
-                type="password" autoFocus value={value} onChange={e => setValue(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSave()}
-                placeholder={placeholder}
-                style={inputStyle}
-            />
-            <button onClick={handleSave} disabled={saving || !value.trim()} style={{
+            <div style={{ flex: 1, position: 'relative' }}>
+                <input
+                    type={visible ? 'text' : 'password'}
+                    autoFocus value={loading ? '' : value}
+                    onChange={e => setValue(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSave()}
+                    placeholder={loading ? 'Carregando…' : placeholder}
+                    disabled={loading}
+                    style={{ ...inputStyle, paddingRight: 36, opacity: loading ? .6 : 1 }}
+                />
+                <button
+                    type="button"
+                    onClick={() => setVisible(v => !v)}
+                    title={visible ? 'Ocultar' : 'Mostrar'}
+                    style={{
+                        position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: visible ? 'var(--accent-ink)' : 'var(--ink-4)',
+                        display: 'flex', alignItems: 'center', padding: 2,
+                    }}
+                >
+                    <EyeIcon open={visible} />
+                </button>
+            </div>
+            <button onClick={handleSave} disabled={saving || !value.trim() || loading} style={{
                 ...btnStyle, background: 'var(--accent)', color: '#fff',
-                borderColor: 'var(--accent-ink)', opacity: (!value.trim() || saving) ? .5 : 1,
+                borderColor: 'var(--accent-ink)', opacity: (!value.trim() || saving || loading) ? .5 : 1,
             }}>
                 {saving ? '…' : 'Salvar'}
             </button>
-            <button onClick={() => { setEditing(false); setValue(''); }} style={{ ...btnStyle, padding: '7px 10px' }}>✕</button>
-        </div>
-    );
-}
-
-function TextField({ value, onSave, placeholder }: {
-    value: string; onSave: (val: string) => Promise<void>; placeholder?: string;
-}) {
-    const [local, setLocal] = useState(value);
-    const [saving, setSaving] = useState(false);
-    const dirty = local !== value && local.trim() !== '';
-
-    // sync when parent updates
-    if (value !== '' && local === '') setLocal(value);
-
-    async function handleSave() {
-        setSaving(true);
-        await onSave(local.trim());
-        setSaving(false);
-    }
-
-    return (
-        <div style={{ display: 'flex', gap: 8 }}>
-            <input value={local} onChange={e => setLocal(e.target.value)} placeholder={placeholder} style={inputStyle} />
-            <button onClick={handleSave} disabled={!dirty || saving} style={{
-                ...btnStyle,
-                background: dirty ? 'var(--accent)' : 'var(--paper-3)',
-                color: dirty ? '#fff' : 'var(--ink-5)',
-                borderColor: dirty ? 'var(--accent-ink)' : 'var(--line)',
-                opacity: saving ? .6 : 1,
-            }}>
-                {saving ? '…' : 'Salvar'}
-            </button>
+            <button onClick={() => { setEditing(false); setValue(''); setVisible(true); }} style={{ ...btnStyle, padding: '7px 10px' }}>✕</button>
         </div>
     );
 }
@@ -231,6 +258,7 @@ function AsaasPanel({ data, patch }: {
                 <SecretField
                     savedMask={data?.apiKey ?? null}
                     onSave={v => patch({ asaasApiKey: v })}
+                    revealField="asaasApiKey"
                     placeholder="$aact_..."
                 />
             </FieldRow>
@@ -275,6 +303,7 @@ function AsaasPanel({ data, patch }: {
                 <SecretField
                     savedMask={data?.webhookSecret ?? null}
                     onSave={v => patch({ asaasWebhookSecret: v })}
+                    revealField="asaasWebhookSecret"
                 />
             </FieldRow>
 
@@ -292,10 +321,108 @@ function AsaasPanel({ data, patch }: {
     );
 }
 
-function CalendarPanel({ data, patch }: {
+function formatConnectedAt(value: string | null) {
+    if (!value) return 'Ainda não conectado';
+
+    try {
+        return new Intl.DateTimeFormat('pt-BR', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+        }).format(new Date(value));
+    } catch {
+        return value;
+    }
+}
+
+function CalendarStateChip({ status, connected }: { status: IntegrationStatus['calendar']['status']; connected: boolean }) {
+    const map = connected
+        ? { label: 'Conectado', bg: 'var(--accent-soft)', color: 'var(--accent-ink)', border: '#c9d8d0' }
+        : status === 'ERROR'
+            ? { label: 'Erro', bg: 'var(--danger-soft)', color: 'var(--danger)', border: '#f0d2d2' }
+            : status === 'EXPIRED'
+                ? { label: 'Expirado', bg: 'var(--amber-soft)', color: 'var(--amber)', border: '#ead7aa' }
+                : { label: 'Não conectado', bg: 'var(--paper-2)', color: 'var(--ink-3)', border: 'var(--line)' };
+
+    return (
+        <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontFamily: "'Geist Mono', monospace", fontSize: 10.5, letterSpacing: .6,
+            textTransform: 'uppercase', padding: '5px 10px', borderRadius: 4,
+            background: map.bg, color: map.color, border: `1px solid ${map.border}`,
+        }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: map.color, display: 'inline-block' }} />
+            {map.label}
+        </span>
+    );
+}
+
+function CalendarPanel({ data }: {
     data: IntegrationStatus['calendar'] | undefined;
-    patch: (fields: Record<string, string>) => Promise<void>;
 }) {
+    const qc = useQueryClient();
+    const [feedback, setFeedback] = useState<{ tone: 'success' | 'error' | 'info'; text: string } | null>(null);
+
+    function readableApiError(error: unknown, fallback: string) {
+        if (axios.isAxiosError(error)) {
+            const message = (error.response?.data as { error?: string } | undefined)?.error;
+            return message ?? fallback;
+        }
+        return fallback;
+    }
+
+    useEffect(() => {
+        const url = new URL(window.location.href);
+        const result = url.searchParams.get('googleCalendar');
+        const reason = url.searchParams.get('reason');
+        if (!result) return;
+
+        const messageMap: Record<string, string> = {
+            access_denied: 'Autorização cancelada pelo usuário.',
+            token_exchange_failed: 'Não foi possível concluir a conexão com Google Calendar.',
+        };
+
+        setFeedback({
+            tone: result === 'success' ? 'success' : 'error',
+            text: result === 'success'
+                ? 'Google Calendar conectado com sucesso.'
+                : messageMap[reason ?? ''] ?? 'Não foi possível concluir a conexão com Google Calendar.',
+        });
+
+        url.searchParams.delete('googleCalendar');
+        url.searchParams.delete('reason');
+        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    }, []);
+
+    const connectMutation = useMutation({
+        mutationFn: () => axios.get<{ url: string }>('/api/integrations/google-calendar/auth-url').then(r => r.data),
+        onSuccess: ({ url }) => { window.location.href = url; },
+        onError: error => setFeedback({ tone: 'error', text: readableApiError(error, 'Não foi possível iniciar a autorização Google.') }),
+    });
+
+    const testMutation = useMutation({
+        mutationFn: () => axios.get<{ ok: boolean; error?: string }>('/api/integrations/google-calendar/test').then(r => r.data),
+        onSuccess: result => {
+            setFeedback(result.ok
+                ? { tone: 'success', text: 'Conexão funcionando.' }
+                : { tone: 'error', text: result.error ?? 'Não foi possível validar a conexão.' });
+            qc.invalidateQueries({ queryKey: ['integrations'] });
+        },
+        onError: error => setFeedback({ tone: 'error', text: readableApiError(error, 'Não foi possível validar a conexão.') }),
+    });
+
+    const disconnectMutation = useMutation({
+        mutationFn: () => axios.post('/api/integrations/google-calendar/disconnect'),
+        onSuccess: () => {
+            setFeedback({ tone: 'info', text: 'Google Calendar desconectado.' });
+            qc.invalidateQueries({ queryKey: ['integrations'] });
+        },
+        onError: error => setFeedback({ tone: 'error', text: readableApiError(error, 'Não foi possível desconectar a integração.') }),
+    });
+
+    const connected = data?.connected ?? false;
+    const status = data?.status ?? 'REVOKED';
+    const showRetry = status === 'ERROR' || status === 'EXPIRED';
+
     return (
         <div>
             <div style={{ marginBottom: 32 }}>
@@ -305,56 +432,143 @@ function CalendarPanel({ data, patch }: {
                             Google Calendar
                         </h2>
                         <p style={{ fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.6, maxWidth: 480 }}>
-                            Permite que o agente consulte disponibilidade e crie agendamentos diretamente no seu calendário durante conversas com leads.
+                            Conecte sua conta Google para autorizar eventos no calendário principal do usuário, com tokens gerenciados com segurança no backend.
                         </p>
                     </div>
-                    <StatusBadge ok={data?.configured ?? false} />
+                    <StatusBadge ok={connected} />
                 </div>
             </div>
 
-            <SectionHeading>Calendário</SectionHeading>
-
-            <FieldRow
-                label="Calendar ID"
-                hint="ID do calendário que o agente usará. Encontre em Google Calendar → Configurações do calendário → ID do calendário."
-            >
-                <TextField
-                    value={data?.calendarId ?? ''}
-                    onSave={v => patch({ googleCalendarId: v })}
-                    placeholder="exemplo@group.calendar.google.com"
-                />
-            </FieldRow>
-
-            <SectionHeading style={{ marginTop: 32 }}>Credenciais OAuth</SectionHeading>
-
-            <FieldRow
-                label="Arquivo de credenciais"
-                hint="As credenciais OAuth do Google devem ser colocadas no servidor manualmente."
-            >
-                <div>
-                    <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 8,
-                        padding: '8px 14px', borderRadius: 8,
-                        border: '1px solid var(--line)', background: 'var(--paper-2)',
-                        fontFamily: "'Geist Mono', monospace", fontSize: 12, color: 'var(--ink-3)',
-                    }}>
-                        backend/config/google-credentials.json
+            <div style={{
+                border: '1px solid var(--line)', background: 'var(--paper)', borderRadius: 14,
+                overflow: 'hidden',
+            }}>
+                <div style={{
+                    padding: '18px 20px',
+                    borderBottom: '1px solid var(--line)',
+                    background: connected ? 'var(--accent-soft)' : 'var(--paper-2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap',
+                }}>
+                    <div>
+                        <div style={{ marginBottom: 8 }}>
+                            <CalendarStateChip status={status} connected={connected} />
+                        </div>
+                        <div style={{ fontSize: 14, color: 'var(--ink-1)', fontWeight: 500, marginBottom: 4 }}>
+                            {connected ? (data?.email ?? 'Conta Google conectada') : 'Google Calendar ainda não conectado'}
+                        </div>
+                        <div style={{
+                            fontFamily: "'Geist Mono', monospace", fontSize: 11.5, color: 'var(--ink-4)',
+                            letterSpacing: .3,
+                        }}>
+                            {connected
+                                ? `Conectado em ${formatConnectedAt(data?.connectedAt ?? null)}`
+                                : (data?.message ?? 'Autorize a conta Google para usar o calendário principal.')}
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {connected ? (
+                            <>
+                                <button
+                                    onClick={() => testMutation.mutate()}
+                                    disabled={testMutation.isPending}
+                                    style={{ ...btnStyle, background: 'var(--paper)', color: 'var(--ink-1)' }}
+                                >
+                                    {testMutation.isPending ? 'Testando…' : 'Testar conexão'}
+                                </button>
+                                <button
+                                    onClick={() => disconnectMutation.mutate()}
+                                    disabled={disconnectMutation.isPending}
+                                    style={{
+                                        ...btnStyle,
+                                        borderColor: '#e2b7b7',
+                                        color: 'var(--danger)',
+                                        background: 'var(--paper)',
+                                    }}
+                                >
+                                    {disconnectMutation.isPending ? 'Desconectando…' : 'Desconectar'}
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={() => connectMutation.mutate()}
+                                disabled={connectMutation.isPending}
+                                style={{
+                                    ...btnStyle,
+                                    background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent-ink)',
+                                }}
+                            >
+                                {connectMutation.isPending ? 'Conectando…' : showRetry ? 'Tentar novamente' : 'Conectar'}
+                            </button>
+                        )}
                     </div>
                 </div>
-            </FieldRow>
 
-            <FieldRow label="Como obter" hint="">
-                <ol style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: 'var(--ink-3)', lineHeight: 2 }}>
-                    <li>Acesse console.cloud.google.com</li>
-                    <li>Crie um projeto e ative a Google Calendar API</li>
-                    <li>Em Credenciais, crie uma Service Account</li>
-                    <li>Baixe o JSON e salve em <code style={{ fontFamily: "'Geist Mono', monospace", fontSize: 12 }}>backend/config/google-credentials.json</code></li>
-                    <li>Compartilhe o calendário com o e-mail da Service Account</li>
-                </ol>
-            </FieldRow>
+                <div style={{ padding: '22px 20px' }}>
+                    {feedback && (
+                        <div style={{
+                            marginBottom: 18,
+                            padding: '12px 14px',
+                            borderRadius: 10,
+                            border: `1px solid ${feedback.tone === 'success' ? '#c9d8d0' : feedback.tone === 'error' ? '#f0d2d2' : 'var(--line)'}`,
+                            background: feedback.tone === 'success' ? 'var(--accent-soft)' : feedback.tone === 'error' ? 'var(--danger-soft)' : 'var(--paper-2)',
+                            color: feedback.tone === 'success' ? 'var(--accent-ink)' : feedback.tone === 'error' ? 'var(--danger)' : 'var(--ink-3)',
+                            fontSize: 12.5,
+                        }}>
+                            {feedback.text}
+                        </div>
+                    )}
+
+                    <div style={{ display: 'grid', gap: 14 }}>
+                        <div style={{
+                            display: 'grid', gridTemplateColumns: '160px 1fr',
+                            gap: 16, paddingBottom: 14, borderBottom: '1px solid var(--line)',
+                        }}>
+                            <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10.5, letterSpacing: .8, textTransform: 'uppercase', color: 'var(--ink-4)' }}>
+                                Escopo
+                            </div>
+                            <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.65 }}>
+                                A integração usa OAuth 2.0 e opera sempre no calendário principal da conta autorizada (<code style={{ fontFamily: "'Geist Mono', monospace", fontSize: 12 }}>primary</code>).
+                            </div>
+                        </div>
+
+                        <div style={{
+                            display: 'grid', gridTemplateColumns: '160px 1fr',
+                            gap: 16, paddingBottom: 14, borderBottom: '1px solid var(--line)',
+                        }}>
+                            <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10.5, letterSpacing: .8, textTransform: 'uppercase', color: 'var(--ink-4)' }}>
+                                Conta atual
+                            </div>
+                            <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.65 }}>
+                                {connected
+                                    ? (
+                                        <>
+                                            <div style={{ color: 'var(--ink-1)', fontWeight: 500, marginBottom: 4 }}>{data?.email ?? 'Conta conectada'}</div>
+                                            <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11.5, color: 'var(--ink-4)' }}>
+                                                status={status} · connectedAt={formatConnectedAt(data?.connectedAt ?? null)}
+                                            </div>
+                                        </>
+                                    )
+                                    : 'Nenhuma conta Google autorizada para este usuário do painel.'}
+                            </div>
+                        </div>
+
+                        <div style={{
+                            display: 'grid', gridTemplateColumns: '160px 1fr',
+                            gap: 16,
+                        }}>
+                            <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10.5, letterSpacing: .8, textTransform: 'uppercase', color: 'var(--ink-4)' }}>
+                                Operações prontas
+                            </div>
+                            <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.8 }}>
+                                Listar eventos, criar evento, atualizar evento, deletar evento e verificar disponibilidade via <code style={{ fontFamily: "'Geist Mono', monospace", fontSize: 12 }}>freeBusy</code>.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <InfoBox>
-                O agente usa o Calendar para verificar horários disponíveis e criar eventos de aula experimental ou sessão de orientação durante a conversa com o lead.
+                O backend guarda e renova tokens automaticamente. Nenhum token sensível é exposto no frontend, e todas as operações futuras usam o calendário <code>primary</code> da conta conectada.
             </InfoBox>
         </div>
     );
@@ -423,18 +637,19 @@ function BotIcon({ size = 20 }: { size?: number }) {
 function AdminChatPanel() {
     const qc = useQueryClient();
 
-    const { data: phoneData, isLoading } = useQuery<{ phone: string | null }>({
+    const { isLoading } = useQuery<{ phone: string | null }>({
         queryKey: ['instance-phone'],
         queryFn: () => axios.get('/api/instances/phone').then(r => r.data),
     });
 
-    const { data: agent } = useQuery<{ settingsJson: Record<string, unknown> }>({
+    const { data: agent } = useQuery<{ adminChatEnabled: boolean; agentInternalMode: string; ownerPhone: string | null }>({
         queryKey: ['agent'],
         queryFn: () => axios.get('/api/agent').then(r => r.data),
     });
 
-    const adminEnabled = agent?.settingsJson?.adminChatEnabled !== false;
-    const ownerPhone = agent?.settingsJson?.ownerPhone as string | undefined;
+    const adminEnabled   = agent?.adminChatEnabled === true;
+    const internalMode   = agent?.agentInternalMode ?? 'orientador';
+    const ownerPhone     = agent?.ownerPhone ?? undefined;
 
     const refreshPhone = useMutation({
         mutationFn: () => axios.get('/api/instances/phone'),
@@ -446,9 +661,13 @@ function AdminChatPanel() {
 
     const toggleAdmin = useMutation({
         mutationFn: (enabled: boolean) =>
-            axios.patch('/api/agent/settings', {
-                settingsJson: { ...(agent?.settingsJson ?? {}), adminChatEnabled: enabled },
-            }),
+            axios.patch('/api/agent/settings', { adminChatEnabled: enabled }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['agent'] }),
+    });
+
+    const setMode = useMutation({
+        mutationFn: (mode: string) =>
+            axios.patch('/api/agent/settings', { agentInternalMode: mode }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['agent'] }),
     });
 
@@ -461,20 +680,67 @@ function AdminChatPanel() {
                 </div>
             </div>
 
-            {/* Toggle */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderRadius: 12, border: `1px solid ${adminEnabled ? '#c9d8d0' : 'var(--line)'}`, background: adminEnabled ? 'var(--accent-soft)' : 'var(--paper)', marginBottom: 24 }}>
+            {/* Toggle ativo/inativo */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderRadius: 12, border: `1px solid ${adminEnabled ? '#c9d8d0' : 'var(--line)'}`, background: adminEnabled ? 'var(--accent-soft)' : 'var(--paper)', marginBottom: 20 }}>
                 <div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: adminEnabled ? 'var(--accent-ink)' : 'var(--ink-2)', marginBottom: 3 }}>
                         {adminEnabled ? 'Agente Interno ativo' : 'Agente Interno desativado'}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--ink-4)' }}>
-                        {adminEnabled ? 'Mensagens para si mesmo ativam o modo admin' : 'Mensagens para si mesmo são salvas normalmente'}
+                        {adminEnabled ? 'Mensagens para si mesmo ativam o modo selecionado' : 'Mensagens para si mesmo são salvas normalmente'}
                     </div>
                 </div>
                 <button onClick={() => toggleAdmin.mutate(!adminEnabled)} disabled={toggleAdmin.isPending} style={{ width: 40, height: 22, borderRadius: 11, border: 'none', padding: 3, cursor: 'pointer', background: adminEnabled ? 'var(--accent)' : 'var(--line-2)', transition: 'background .15s', flexShrink: 0 }}>
                     <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'transform .15s', transform: adminEnabled ? 'translateX(18px)' : 'translateX(0)' }} />
                 </button>
             </div>
+
+            {/* Seletor de modo */}
+            {adminEnabled && (
+                <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-4)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>Modo de operação</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        {[
+                            {
+                                id: 'orientador',
+                                title: 'Orientador do Sistema',
+                                desc: 'Responde perguntas sobre métricas, leads ativos, status de atendimento e dados do sistema.',
+                                icon: '📊',
+                            },
+                            {
+                                id: 'simulador',
+                                title: 'Simulador de Atendimento',
+                                desc: 'Simula o fluxo real do agente. Perfeito para testar o comportamento sem precisar de outro contato.',
+                                icon: '🎭',
+                            },
+                        ].map(({ id, title, desc, icon }) => {
+                            const active = internalMode === id;
+                            return (
+                                <button key={id} onClick={() => setMode.mutate(id)} style={{
+                                    padding: '16px', borderRadius: 12, textAlign: 'left', cursor: 'pointer',
+                                    border: `2px solid ${active ? 'var(--accent)' : 'var(--line)'}`,
+                                    background: active ? 'var(--accent-soft)' : 'var(--paper)',
+                                    fontFamily: 'inherit', transition: 'all .15s',
+                                }}>
+                                    <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
+                                    <div style={{ fontSize: 13, fontWeight: 600, color: active ? 'var(--accent-ink)' : 'var(--ink-1)', marginBottom: 4 }}>{title}</div>
+                                    <div style={{ fontSize: 11.5, color: 'var(--ink-4)', lineHeight: 1.5 }}>{desc}</div>
+                                    {active && (
+                                        <div style={{ marginTop: 10, display: 'inline-block', fontSize: 10.5, fontWeight: 600, color: 'var(--accent-ink)', background: 'var(--accent)', padding: '2px 8px', borderRadius: 4 }}>
+                                            ATIVO
+                                        </div>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {internalMode === 'simulador' && (
+                        <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 8, background: '#fef3c7', border: '1px solid #fde68a', fontSize: 12, color: '#92400e', lineHeight: 1.5 }}>
+                            <strong>Modo Simulador ativo.</strong> Respostas do agente aparecerão com a tag <strong>[🤖 ARTEMIS]</strong> no WhatsApp para distinguir do que você enviou.
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Número detectado */}
             <div style={{ padding: '20px', borderRadius: 12, border: '1px solid var(--line)', background: 'var(--paper)', marginBottom: 20 }}>
@@ -544,7 +810,7 @@ export function Integracoes() {
 
     const configuredMap: Record<TabId, boolean> = {
         asaas: integs?.asaas.configured ?? false,
-        calendar: integs?.calendar.configured ?? false,
+        calendar: integs?.calendar.connected ?? false,
         admin: false,
     };
 
@@ -612,7 +878,7 @@ export function Integracoes() {
                 ) : active === 'asaas' ? (
                     <AsaasPanel data={integs?.asaas} patch={patcher('asaas')} />
                 ) : active === 'calendar' ? (
-                    <CalendarPanel data={integs?.calendar} patch={patcher('calendar')} />
+                    <CalendarPanel data={integs?.calendar} />
                 ) : (
                     <AdminChatPanel />
                 )}

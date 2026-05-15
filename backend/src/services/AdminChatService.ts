@@ -1,6 +1,8 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { FunctionDeclaration, GoogleGenerativeAI, SchemaType, Tool } from '@google/generative-ai';
 import { prisma } from '../utils/prisma';
 import { log } from './LogService';
+import { googleCalendarIntegrationService } from './GoogleCalendarIntegrationService';
+import { asaasServiceForTenant } from './AsaasService';
 
 async function resolveGeminiKey(tenantId: string): Promise<string> {
     if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
@@ -65,7 +67,13 @@ ${recentMsgs.map(m =>
 ## COMPORTAMENTO:
 - Responda perguntas sobre leads, métricas, conversas, status do sistema
 - Se perguntarem sobre um lead específico, forneça os dados disponíveis
-- Se perguntarem para fazer algo (deletar, atualizar), avise que isso é feito pelo painel web
+- Para agendar reunião ou compromisso, use as ferramentas de calendário disponíveis
+- Para cancelar reunião ou compromisso no calendário, use as ferramentas de calendário disponíveis
+- Para criar ou consultar clientes/cobranças no Asaas, use as ferramentas Asaas disponíveis
+- Se faltar data, horário, título ou duração, pergunte antes de criar o evento
+- Se faltar nome ou CPF/CNPJ para cliente Asaas, pergunte antes de criar cliente
+- Se faltar customer ID, valor ou CPF/CNPJ do cliente para cobrança, pergunte antes de criar cobrança no Asaas
+- Se pedirem deletar ou atualizar dados do sistema fora das ferramentas disponíveis, avise que isso é feito pelo painel web
 - Seja conciso — respostas curtas e diretas para WhatsApp
 `.trim();
 }
@@ -80,13 +88,416 @@ function timeAgo(date: Date): string {
 }
 
 export async function handleAdminMessage(tenantId: string, message: string, history: Array<{ role: 'user' | 'model'; content: string }>): Promise<string> {
+    const result = await handleAdminMessageWithTrace(tenantId, message, history);
+    return result.text;
+}
+
+const checkCalendarAvailabilityDecl: FunctionDeclaration = {
+    name: 'admin_check_calendar_availability',
+    description: 'Verifica disponibilidade no Google Calendar conectado do operador para um intervalo de data/hora.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            timeMin: { type: SchemaType.STRING, description: 'Início em ISO 8601 com fuso, ex: 2026-05-16T12:00:00-04:00' },
+            timeMax: { type: SchemaType.STRING, description: 'Fim em ISO 8601 com fuso, ex: 2026-05-16T12:30:00-04:00' },
+        },
+        required: ['timeMin', 'timeMax'],
+    },
+};
+
+const createCalendarEventDecl: FunctionDeclaration = {
+    name: 'admin_create_calendar_event',
+    description: 'Cria um evento no Google Calendar conectado do operador. Use após ter data, hora, duração e título claros.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            summary: { type: SchemaType.STRING, description: 'Título do evento. Ex: Reunião com Luana' },
+            startTime: { type: SchemaType.STRING, description: 'Início em ISO 8601 com fuso, ex: 2026-05-16T12:00:00-04:00' },
+            endTime: { type: SchemaType.STRING, description: 'Fim em ISO 8601 com fuso, ex: 2026-05-16T12:30:00-04:00' },
+            description: { type: SchemaType.STRING, description: 'Descrição opcional do evento' },
+        },
+        required: ['summary', 'startTime', 'endTime'],
+    },
+};
+
+const findCalendarEventsDecl: FunctionDeclaration = {
+    name: 'admin_find_calendar_events',
+    description: 'Busca eventos no Google Calendar conectado do operador por intervalo e texto opcional. Use antes de cancelar eventos.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            timeMin: { type: SchemaType.STRING, description: 'Início em ISO 8601 com fuso, ex: 2026-05-16T00:00:00-04:00' },
+            timeMax: { type: SchemaType.STRING, description: 'Fim em ISO 8601 com fuso, ex: 2026-05-17T00:00:00-04:00' },
+            query: { type: SchemaType.STRING, description: 'Texto para filtrar, ex: Luana. Opcional.' },
+        },
+        required: ['timeMin', 'timeMax'],
+    },
+};
+
+const cancelCalendarEventDecl: FunctionDeclaration = {
+    name: 'admin_cancel_calendar_event',
+    description: 'Cancela um evento do Google Calendar pelo ID. Use somente após identificar um evento específico com admin_find_calendar_events.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            eventId: { type: SchemaType.STRING, description: 'ID do evento retornado por admin_find_calendar_events.' },
+        },
+        required: ['eventId'],
+    },
+};
+
+const createAsaasCustomerDecl: FunctionDeclaration = {
+    name: 'admin_create_asaas_customer',
+    description: 'Cria um cliente no Asaas usando a configuração Asaas do tenant.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            name: { type: SchemaType.STRING, description: 'Nome completo do cliente.' },
+            cpfCnpj: { type: SchemaType.STRING, description: 'CPF ou CNPJ obrigatório.' },
+            email: { type: SchemaType.STRING, description: 'Email do cliente. Opcional.' },
+            mobilePhone: { type: SchemaType.STRING, description: 'Telefone celular com DDD. Opcional.' },
+        },
+        required: ['name', 'cpfCnpj'],
+    },
+};
+
+const listAsaasCustomersDecl: FunctionDeclaration = {
+    name: 'admin_list_asaas_customers',
+    description: 'Lista clientes do Asaas com filtros opcionais.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            name: { type: SchemaType.STRING, description: 'Filtro por nome. Opcional.' },
+            cpfCnpj: { type: SchemaType.STRING, description: 'Filtro por CPF/CNPJ. Opcional.' },
+            limit: { type: SchemaType.NUMBER, description: 'Limite de resultados. Padrão 10.' },
+        },
+    },
+};
+
+const createAsaasPaymentDecl: FunctionDeclaration = {
+    name: 'admin_create_asaas_payment',
+    description: 'Cria uma cobrança avulsa no Asaas para um customer ID existente. Antes de chamar, garanta que o cliente tem CPF/CNPJ cadastrado. Se dueDate não for informado, o sistema usa a data de hoje.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            customer: { type: SchemaType.STRING, description: 'ID do cliente Asaas, ex: cus_000...' },
+            billingType: { type: SchemaType.STRING, description: 'Tipo de cobrança: UNDEFINED, BOLETO, PIX ou CREDIT_CARD.' },
+            value: { type: SchemaType.NUMBER, description: 'Valor da cobrança em reais.' },
+            dueDate: { type: SchemaType.STRING, description: 'Vencimento em YYYY-MM-DD. Opcional; padrão é hoje.' },
+            description: { type: SchemaType.STRING, description: 'Descrição da cobrança. Opcional.' },
+            externalReference: { type: SchemaType.STRING, description: 'Referência externa. Opcional.' },
+        },
+        required: ['customer', 'billingType', 'value'],
+    },
+};
+
+const listAsaasPaymentsDecl: FunctionDeclaration = {
+    name: 'admin_list_asaas_payments',
+    description: 'Lista cobranças do Asaas com filtros opcionais.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            customer: { type: SchemaType.STRING, description: 'ID do cliente Asaas. Opcional.' },
+            status: { type: SchemaType.STRING, description: 'Status da cobrança, ex: PENDING, RECEIVED, OVERDUE. Opcional.' },
+            paymentId: { type: SchemaType.STRING, description: 'ID da cobrança Asaas, ex: pay_000... Opcional.' },
+            limit: { type: SchemaType.NUMBER, description: 'Limite de resultados. Padrão 10.' },
+        },
+    },
+};
+
+const updateAsaasPaymentDecl: FunctionDeclaration = {
+    name: 'admin_update_asaas_payment',
+    description: 'Atualiza uma cobrança existente do Asaas. Aceita paymentId pay_... ou paymentUrl/invoiceUrl. Use para alterar valor, vencimento, descrição ou tipo de cobrança.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            paymentId: { type: SchemaType.STRING, description: 'ID da cobrança Asaas, ex: pay_000... Opcional se paymentUrl for informado.' },
+            paymentUrl: { type: SchemaType.STRING, description: 'Link/invoiceUrl da cobrança, ex: https://sandbox.asaas.com/i/.... Opcional se paymentId for informado.' },
+            value: { type: SchemaType.NUMBER, description: 'Novo valor em reais. Opcional.' },
+            dueDate: { type: SchemaType.STRING, description: 'Novo vencimento em YYYY-MM-DD. Opcional.' },
+            description: { type: SchemaType.STRING, description: 'Nova descrição. Opcional.' },
+            billingType: { type: SchemaType.STRING, description: 'Novo tipo: UNDEFINED (Livre/cliente escolhe), BOLETO, PIX ou CREDIT_CARD. Opcional.' },
+        },
+    },
+};
+
+type AdminTrace = {
+    toolsUsed: string[];
+    state: string;
+    modelId: string;
+    ragUsed?: { chars: number; snippet: string } | null;
+};
+
+async function resolveCalendarAuthUser(tenantId: string) {
+    const integration = await prisma.userGoogleCalendarIntegration.findFirst({
+        where: { tenantId, status: 'CONNECTED', revokedAt: null },
+        orderBy: { updatedAt: 'desc' },
+        select: { tenantUserId: true },
+    });
+    if (!integration) {
+        throw new Error('Google Calendar não conectado para este tenant.');
+    }
+    return { tenantId, userId: integration.tenantUserId };
+}
+
+function normalizeAsaasUrlToken(url: string): string {
+    return String(url).trim().split('?')[0].replace(/\/$/, '').split('/').pop() ?? '';
+}
+
+function normalizeBillingType(value?: string): string | undefined {
+    if (!value) return undefined;
+    const normalized = String(value).trim().toUpperCase();
+    const compact = normalized.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    if (['UNDEFINED', 'BOLETO', 'PIX', 'CREDIT_CARD'].includes(normalized)) return normalized;
+    if (compact.includes('CLIENTE ESCOL') || compact.includes('LIVRE') || compact.includes('QUALQUER') || compact.includes('INDEFIN')) {
+        return 'UNDEFINED';
+    }
+    if (compact.includes('CARTAO') || compact.includes('CREDITO')) return 'CREDIT_CARD';
+    if (compact.includes('BOLETO')) return 'BOLETO';
+    if (compact.includes('PIX')) return 'PIX';
+
+    return normalized;
+}
+
+async function resolveAsaasPaymentId(svc: Awaited<ReturnType<typeof asaasServiceForTenant>>, args: any): Promise<string> {
+    const rawPaymentId = String(args.paymentId ?? '').trim();
+    if (rawPaymentId.startsWith('pay_')) return rawPaymentId;
+
+    const paymentUrl = String(args.paymentUrl ?? args.invoiceUrl ?? (!rawPaymentId.startsWith('pay_') ? rawPaymentId : '')).trim();
+    const token = paymentUrl ? normalizeAsaasUrlToken(paymentUrl) : '';
+    if (!token) throw new Error('Informe o ID da cobrança ou o link de pagamento para atualizar.');
+
+    const listed = await svc.listPayments({ limit: 50 });
+    const payments: any[] = listed?.data ?? [];
+    const match = payments.find(payment => {
+        const urls = [payment.invoiceUrl, payment.bankSlipUrl, payment.transactionReceiptUrl].filter(Boolean).map(String);
+        return urls.some(url => url === paymentUrl || normalizeAsaasUrlToken(url) === token);
+    });
+
+    if (!match?.id) {
+        throw new Error('Não encontrei a cobrança correspondente a esse link. Liste cobranças recentes e tente novamente com o ID pay_...');
+    }
+
+    return match.id;
+}
+
+async function executeAdminTool(tenantId: string, name: string, args: any) {
+    if (name === 'admin_create_asaas_customer') {
+        if (!args.cpfCnpj || String(args.cpfCnpj).replace(/\D/g, '').length < 11) {
+            return { error: 'CPF ou CNPJ obrigatório para criar cliente Asaas.' };
+        }
+        const svc = await asaasServiceForTenant(tenantId);
+        const customer = await svc.createCustomer({
+            name: args.name,
+            cpfCnpj: String(args.cpfCnpj).replace(/\D/g, ''),
+            email: args.email,
+            mobilePhone: args.mobilePhone?.replace(/\D/g, ''),
+        });
+        return {
+            ok: true,
+            customer: {
+                id: customer.id,
+                name: customer.name,
+                email: customer.email,
+                mobilePhone: customer.mobilePhone,
+                cpfCnpj: customer.cpfCnpj,
+            },
+            message: 'Cliente criado com sucesso. Não destaque o ID técnico salvo se o operador não pedir.',
+        };
+    }
+
+    if (name === 'admin_list_asaas_customers') {
+        const svc = await asaasServiceForTenant(tenantId);
+        const result = await svc.listCustomers({
+            limit: args.limit ?? 10,
+            ...(args.name ? { name: args.name } : {}),
+            ...(args.cpfCnpj ? { cpfCnpj: String(args.cpfCnpj).replace(/\D/g, '') } : {}),
+        });
+        return result;
+    }
+
+    if (name === 'admin_create_asaas_payment') {
+        const svc = await asaasServiceForTenant(tenantId);
+        const today = new Date().toISOString().split('T')[0];
+        const payment = await svc.createPayment({
+            customer: args.customer,
+            billingType: normalizeBillingType(args.billingType) ?? 'UNDEFINED',
+            value: Number(args.value),
+            dueDate: args.dueDate || today,
+            description: args.description,
+            externalReference: args.externalReference,
+        });
+        return {
+            ok: true,
+            payment: {
+                id: payment.id,
+                status: payment.status,
+                billingType: payment.billingType,
+                value: payment.value,
+                dueDate: payment.dueDate,
+                invoiceUrl: payment.invoiceUrl,
+                bankSlipUrl: payment.bankSlipUrl,
+                transactionReceiptUrl: payment.transactionReceiptUrl,
+                pixQrCode: payment.pixQrCode,
+            },
+            message: 'Cobrança criada com sucesso. Informe valor, vencimento, status e link de pagamento quando disponível.',
+        };
+    }
+
+    if (name === 'admin_list_asaas_payments') {
+        const svc = await asaasServiceForTenant(tenantId);
+        return svc.listPayments({
+            limit: args.limit ?? 10,
+            ...(args.paymentId ? { id: args.paymentId } : {}),
+            ...(args.customer ? { customer: args.customer } : {}),
+            ...(args.status ? { status: args.status } : {}),
+        });
+    }
+
+    if (name === 'admin_update_asaas_payment') {
+        const svc = await asaasServiceForTenant(tenantId);
+        const paymentId = await resolveAsaasPaymentId(svc, args);
+        const payment = await svc.updatePayment(paymentId, {
+            ...(args.value !== undefined ? { value: Number(args.value) } : {}),
+            ...(args.dueDate ? { dueDate: args.dueDate } : {}),
+            ...(args.description ? { description: args.description } : {}),
+            ...(args.billingType ? { billingType: normalizeBillingType(args.billingType) } : {}),
+        });
+        return {
+            ok: true,
+            payment: {
+                id: payment.id,
+                status: payment.status,
+                billingType: payment.billingType,
+                value: payment.value,
+                dueDate: payment.dueDate,
+                invoiceUrl: payment.invoiceUrl,
+            },
+            message: 'Cobrança atualizada com sucesso. Informe valor, vencimento, status e link de pagamento quando disponível.',
+        };
+    }
+
+    const authUser = await resolveCalendarAuthUser(tenantId);
+
+    if (name === 'admin_check_calendar_availability') {
+        const result = await googleCalendarIntegrationService.listEvents(authUser, {
+            timeMin: new Date(args.timeMin).toISOString(),
+            timeMax: new Date(args.timeMax).toISOString(),
+            singleEvents: true,
+            orderBy: 'startTime',
+        });
+        const busy = result.items?.map((event: any) => ({
+            id: event.id,
+            summary: event.summary,
+            start: event.start?.dateTime ?? event.start?.date,
+            end: event.end?.dateTime ?? event.end?.date,
+        })) ?? [];
+        return busy.length === 0
+            ? { busySlots: [], message: 'Horário disponível.' }
+            : { busySlots: busy, message: `${busy.length} conflito(s) encontrado(s).` };
+    }
+
+    if (name === 'admin_create_calendar_event') {
+        const busyResult = await googleCalendarIntegrationService.listEvents(authUser, {
+            timeMin: new Date(args.startTime).toISOString(),
+            timeMax: new Date(args.endTime).toISOString(),
+            singleEvents: true,
+            orderBy: 'startTime',
+        });
+        const busy = busyResult.items ?? [];
+        if (busy.length > 0) {
+            return { error: 'Horário indisponível. Já existe compromisso neste intervalo.', busySlots: busy };
+        }
+
+        const event = await googleCalendarIntegrationService.createEvent(authUser, {
+            summary: args.summary,
+            description: args.description,
+            start: { dateTime: new Date(args.startTime).toISOString(), timeZone: 'America/Cuiaba' },
+            end: { dateTime: new Date(args.endTime).toISOString(), timeZone: 'America/Cuiaba' },
+        });
+
+        return { ok: true, eventId: event.id, htmlLink: event.htmlLink, summary: event.summary };
+    }
+
+    if (name === 'admin_find_calendar_events') {
+        const result = await googleCalendarIntegrationService.listEvents(authUser, {
+            timeMin: new Date(args.timeMin).toISOString(),
+            timeMax: new Date(args.timeMax).toISOString(),
+            q: args.query || undefined,
+            singleEvents: true,
+            orderBy: 'startTime',
+        });
+        const events = result.items?.map((event: any) => ({
+            id: event.id,
+            summary: event.summary,
+            start: event.start?.dateTime ?? event.start?.date,
+            end: event.end?.dateTime ?? event.end?.date,
+        })) ?? [];
+        return events.length === 0
+            ? { events: [], message: 'Nenhum evento encontrado neste intervalo.' }
+            : { events, message: `${events.length} evento(s) encontrado(s).` };
+    }
+
+    if (name === 'admin_cancel_calendar_event') {
+        await googleCalendarIntegrationService.deleteEvent(authUser, args.eventId);
+        return { ok: true, message: 'Evento cancelado com sucesso.' };
+    }
+
+    return { error: `Ferramenta '${name}' não reconhecida.` };
+}
+
+export async function handleAdminMessageWithTrace(tenantId: string, message: string, history: Array<{ role: 'user' | 'model'; content: string }>): Promise<{ text: string; trace: AdminTrace }> {
+    const toolsUsed: string[] = [];
     try {
         const apiKey = await resolveGeminiKey(tenantId);
         // Usa modelo fixo para admin (gemini-2.5-flash, sem preview)
         const MODEL = 'gemini-2.5-flash';
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const systemInstruction = await buildSystemContext(tenantId);
+        const baseContext = await buildSystemContext(tenantId);
+        const now = new Date();
+        const systemInstruction = `${baseContext}
+
+## CALENDÁRIO
+- Data/hora atual: ${now.toLocaleString('pt-BR', { timeZone: 'America/Cuiaba' })}
+- Fuso padrão: America/Cuiaba
+- Se o usuário disser "amanhã", calcule a data a partir da data atual acima
+- Se duração não for informada, use 30 minutos para reunião
+- Se participante não tiver email explícito, crie o evento sem convidado externo
+- Antes de criar evento, chame admin_check_calendar_availability para o mesmo intervalo
+- Depois de criar evento, confirme título, data e horário em português
+- Para cancelar "essa reunião" ou evento citado no histórico recente, use o contexto anterior para inferir data/título, busque com admin_find_calendar_events e cancele apenas se houver um único resultado claro
+- Se houver mais de um evento possível, liste opções curtas e peça confirmação antes de cancelar
+
+## ASAAS
+- Para "me cadastrar como cliente", peça nome e CPF/CNPJ se não estiverem claros; email e telefone são opcionais
+- Após criar cliente Asaas, confirme nome/cadastro criado; não destaque o ID técnico, só informe se o operador pedir ou se precisar usar em próxima ação
+- Para criar cobrança, se vencimento não for informado, use a data de hoje
+- Para cobrança PIX, use billingType PIX
+- Se o usuário pedir "cliente escolhe", "forma livre", "qualquer forma" ou "indefinido", use billingType UNDEFINED
+- Para criar cobrança, não invente valor ou cliente; o cliente precisa ter CPF/CNPJ cadastrado no Asaas
+- Se o cliente atual ainda não tem CPF/CNPJ, peça o CPF/CNPJ antes de criar cobrança PIX
+- Se o cliente atual tiver sido criado na conversa recente com CPF/CNPJ, use esse customer ID do contexto
+- Após criar cobrança, informe de forma prática: valor, vencimento, status e link de pagamento/invoiceUrl se existir; não exponha JSON bruto nem foque em IDs técnicos
+- Para alterar "essa cobrança" ou "dela", use o ID da cobrança criada/listada no histórico recente
+- Se houver apenas invoiceUrl/link no histórico, busque cobranças recentes com admin_list_asaas_payments e compare pelo invoiceUrl antes de atualizar
+- Se o usuário disser "vencimento dia 20" sem mês/ano, use o mês/ano da cobrança atual; se não houver cobrança no contexto, use mês/ano atuais
+- Para atualizar forma de pagamento para livre/cliente escolhe, chame admin_update_asaas_payment com billingType UNDEFINED
+- Para atualizar cobrança, use admin_update_asaas_payment; não mande para o painel web`.trim();
+        const tools: Tool[] = [{
+            functionDeclarations: [
+                checkCalendarAvailabilityDecl,
+                createCalendarEventDecl,
+                findCalendarEventsDecl,
+                cancelCalendarEventDecl,
+                createAsaasCustomerDecl,
+                listAsaasCustomersDecl,
+                createAsaasPaymentDecl,
+                listAsaasPaymentsDecl,
+                updateAsaasPaymentDecl,
+            ],
+        }];
 
         // Gemini exige que history comece com role='user', nunca 'model'
         // Filtra os últimos N turnos e garante que o primeiro seja 'user'
@@ -98,14 +509,44 @@ export async function handleAdminMessage(tenantId: string, message: string, hist
         const firstUserIdx = rawHistory.findIndex(h => h.role === 'user');
         const cleanHistory = firstUserIdx >= 0 ? rawHistory.slice(firstUserIdx) : [];
 
-        const chat = genAI.getGenerativeModel({ model: MODEL, systemInstruction }).startChat({
+        const chat = genAI.getGenerativeModel({ model: MODEL, systemInstruction, tools }).startChat({
             history: cleanHistory,
         });
 
-        const result = await chat.sendMessage(message);
-        return result.response.text();
+        let result = await chat.sendMessage(message);
+        const loopStart = Date.now();
+
+        while (Date.now() - loopStart < 60_000) {
+            const parts = result.response.candidates?.[0]?.content?.parts ?? [];
+            const toolCallParts = parts.filter((p: any) => p.functionCall);
+            if (toolCallParts.length === 0) break;
+
+            const functionResponses: Array<{ name: string; result: any }> = [];
+            for (const toolCallPart of toolCallParts) {
+                const { name, args } = toolCallPart.functionCall as { name: string; args: any };
+                if (!toolsUsed.includes(name)) toolsUsed.push(name);
+
+                try {
+                    functionResponses.push({ name, result: await executeAdminTool(tenantId, name, args) });
+                } catch (toolError: any) {
+                    functionResponses.push({ name, result: { error: toolError?.message ?? 'Erro ao executar ferramenta.' } });
+                }
+            }
+
+            result = await chat.sendMessage(
+                functionResponses.map(fr => ({ functionResponse: { name: fr.name, response: { result: fr.result } } }))
+            );
+        }
+
+        return {
+            text: result.response.text().replace(/\*\*/g, '*'),
+            trace: { toolsUsed, state: 'ORIENTADOR', modelId: MODEL, ragUsed: { chars: systemInstruction.length, snippet: systemInstruction.slice(0, 300) } },
+        };
     } catch (err: any) {
         log.ai('error', 'Erro no admin chat', { error: err?.message });
-        return `⚠️ Erro ao processar: ${err?.message ?? 'desconhecido'}`;
+        return {
+            text: `⚠️ Erro ao processar: ${err?.message ?? 'desconhecido'}`,
+            trace: { toolsUsed, state: 'ORIENTADOR', modelId: 'gemini-2.5-flash', ragUsed: null },
+        };
     }
 }

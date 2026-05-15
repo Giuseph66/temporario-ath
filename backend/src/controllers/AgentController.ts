@@ -134,6 +134,7 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<R
     if (src.whitelistEnabled        !== undefined) data.whitelistEnabled        = Boolean(src.whitelistEnabled);
     if (src.ignoreGroups            !== undefined) data.ignoreGroups            = Boolean(src.ignoreGroups);
     if (src.adminChatEnabled        !== undefined) data.adminChatEnabled        = Boolean(src.adminChatEnabled);
+    if (src.agentInternalMode       !== undefined) data.agentInternalMode       = String(src.agentInternalMode);
     if (src.ownerPhone              !== undefined) data.ownerPhone              = src.ownerPhone ? String(src.ownerPhone) : null;
     if (src.humanSupportNumber      !== undefined) data.humanSupportNumber      = src.humanSupportNumber ? String(src.humanSupportNumber) : null;
     if (src.humanHandoffMessage     !== undefined) data.humanHandoffMessage     = src.humanHandoffMessage ? String(src.humanHandoffMessage) : null;

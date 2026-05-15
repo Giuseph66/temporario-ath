@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import { normalizeBrazilianPhone } from '../utils/phoneNormalizer';
 import { log } from '../services/LogService';
-import { handleAdminMessage } from '../services/AdminChatService';
+import { handleAdminMessageWithTrace } from '../services/AdminChatService';
 import { EvolutionService } from '../services/EvolutionService';
 
 function phoneVariants(phone: string): string[] {
@@ -152,31 +152,50 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
 
         // ── SELF-MESSAGE: detecta quando o operador fala consigo mesmo ────────
         if (data?.key?.fromMe) {
-            // Verifica se é mensagem para si mesmo (admin chat)
-            const adminEnabled = agent?.adminChatEnabled !== false;
-            const ownerPhone = agent?.ownerPhone as string | undefined;
+            const adminEnabled  = agent?.adminChatEnabled !== false;
+            const internalMode  = (agent as any)?.agentInternalMode ?? 'orientador';
+            const ownerPhone    = (agent as any)?.ownerPhone as string | undefined;
 
             const isSelfMessage = ownerPhone
                 ? phoneVariants(rawPhone).some(v => phoneVariants(ownerPhone).includes(v))
                 : false;
 
             if (isSelfMessage && adminEnabled) {
-                log.webhook('info', 'Admin chat: mensagem para si mesmo detectada', { tenant: tenant.slug });
-                // Busca histórico recente do admin no banco
-                const adminHistory = await prisma.chatHistory.findMany({
-                    where: { userId: user.id },
-                    orderBy: { createdAt: 'desc' },
-                    take: 20,
-                    select: { role: true, content: true },
-                });
-                const history = adminHistory.reverse()
-                    .filter(m => m.role === 'user' || m.role === 'model')
-                    .map(m => ({ role: m.role as 'user' | 'model', content: m.content }));
+                if (internalMode === 'simulador') {
+                    // ── MODO SIMULADOR: roda fluxo normal do agente, com tag ──
+                    log.webhook('info', 'Agente Interno [SIMULADOR]: mensagem para si mesmo → processa como lead', { tenant: tenant.slug });
 
-                const reply = await handleAdminMessage(tenant.id, messageText, history);
-                await prisma.chatHistory.create({ data: { userId: user.id, role: 'model', content: reply } });
-                await EvolutionService.sendText(tenant.evolutionInstance!, phoneNumber, reply);
-                log.webhook('info', 'Admin chat: resposta enviada', { tenant: tenant.slug, chars: reply.length });
+                    const { scheduleProcessing } = await import('./WebhookController');
+                    await Promise.race([
+                        // messageAlreadySaved=true (já salvou acima), simulatorMode=true
+                        Promise.resolve(scheduleProcessing(phoneNumber, messageText, tenant.id, agent?.id ?? undefined, true, true)),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 120_000)),
+                    ]).catch(err => {
+                        log.webhook('error', 'Erro no simulador', { error: err?.message });
+                    });
+                } else {
+                    // ── MODO ORIENTADOR: responde sobre o sistema ─────────────
+                    log.webhook('info', 'Agente Interno [ORIENTADOR]: consultando sistema', { tenant: tenant.slug });
+                    const adminHistory = await prisma.chatHistory.findMany({
+                        where: { userId: user.id },
+                        orderBy: { createdAt: 'desc' },
+                        take: 20,
+                        select: { role: true, content: true },
+                    });
+                    const history = adminHistory.reverse()
+                        .slice(0, -1)
+                        .filter(m => m.role === 'user' || m.role === 'operator' || m.role === 'model')
+                        .map(m => ({
+                            role: (m.role === 'model' ? 'model' : 'user') as 'user' | 'model',
+                            content: m.content,
+                        }));
+
+                    const { text: reply, trace } = await handleAdminMessageWithTrace(tenant.id, messageText, history);
+                    const whatsappReply = `*[🧭 ORIENTADOR]*\n${reply}`;
+                    await prisma.chatHistory.create({ data: { userId: user.id, role: 'model', content: reply, trace: trace as any } });
+                    await EvolutionService.sendText(tenant.evolutionInstance!, phoneNumber, whatsappReply);
+                    log.webhook('info', 'Orientador: resposta enviada', { tenant: tenant.slug, chars: reply.length });
+                }
             }
             return;
         }
@@ -196,10 +215,13 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
 
         // ── WHITELIST: decide se bot responde (não impede salvar) ─────────────
         if (agent?.whitelistEnabled) {
-            const allowed: string[] = agent?.whitelistPhones?.map((w: any) => w.phone) ?? [];
-            if (!allowed.includes(phoneNumber)) {
+            const allowedSet = new Set(agent?.whitelistPhones?.map((w: any) => w.phone) ?? []);
+            const variants = phoneVariants(phoneNumber);
+            if (!variants.some(v => allowedSet.has(v))) {
                 log.webhook('info', 'Whitelist: contato bloqueado (mensagem salva, bot não responde)', {
                     phone: phoneNumber.slice(0, 4) + '****',
+                    variants: variants.join(','),
+                    allowed: [...allowedSet].join(','),
                 });
                 return;
             }

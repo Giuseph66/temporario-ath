@@ -59,7 +59,7 @@ export async function getLead(req: AuthRequest, res: Response): Promise<Response
     const lead = await prisma.user.findFirst({
         where: { id: req.params.id, tenantId: req.tenantId },
         include: {
-            messages: { orderBy: { createdAt: 'asc' }, take: 50 },
+            messages: { orderBy: { createdAt: 'desc' }, take: 200 },
         },
     });
     if (!lead) return res.status(404).json({ error: 'Lead não encontrado' });
@@ -136,7 +136,10 @@ export async function clearSession(req: AuthRequest, res: Response): Promise<Res
 
     await prisma.user.update({
         where: { id: lead.id },
-        data: { conversationState: 'GREETING' },
+        data: {
+            conversationState: 'GREETING',
+            interactionCount: 0,  // StateResolver usa <= 1 pra detectar primeira interação
+        },
     });
 
     // Marca no histórico que uma nova sessão foi iniciada (contexto visual)

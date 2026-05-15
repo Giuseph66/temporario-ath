@@ -31,6 +31,7 @@ model Tenant {
   users             User[]
   agents            Agent[]
   tenantUsers       TenantUser[]
+  googleCalendarIntegrations UserGoogleCalendarIntegration[]
   knowledgeDocs     KnowledgeDocument[]
   contacts          Contact[]
 }
@@ -45,6 +46,37 @@ model TenantUser {
   createdAt    DateTime  @default(now())
 
   tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  googleCalendarIntegration UserGoogleCalendarIntegration?
+}
+
+enum GoogleCalendarIntegrationStatus {
+  CONNECTED
+  ERROR
+  REVOKED
+  EXPIRED
+}
+
+model UserGoogleCalendarIntegration {
+  id          String                          @id @default(uuid())
+  tenantUserId String                        @unique
+  tenantId    String
+  googleEmail String?
+  accessToken String?
+  refreshToken String?
+  expiresAt   DateTime?
+  scopes      Json?
+  status      GoogleCalendarIntegrationStatus @default(CONNECTED)
+  lastError   String?
+  connectedAt DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime                        @default(now())
+  updatedAt   DateTime                        @updatedAt
+
+  tenantUser  TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([status])
 }
 
 model Agent {
@@ -69,6 +101,7 @@ model Agent {
   whitelistEnabled        Boolean @default(false)
   ignoreGroups            Boolean @default(true)
   adminChatEnabled        Boolean @default(true)
+  agentInternalMode       String  @default("orientador") // orientador | simulador
   ownerPhone              String?
   humanSupportNumber      String?
   humanHandoffMessage     String? @db.Text
@@ -266,6 +299,7 @@ model ChatHistory {
   userId    String
   role      String
   content   String
+  trace     Json?
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

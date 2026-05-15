@@ -55,22 +55,39 @@ function RowField({ label, value }: { label: string; value: React.ReactNode }) {
     );
 }
 
-function KeyField({ label, description, savedMask, onSave }: {
+function KeyField({ label, description, savedMask, onSave, revealField }: {
     label: string; description: string;
     savedMask: string | null;
     onSave: (val: string) => Promise<void>;
+    revealField?: string;
 }) {
     const [editing, setEditing] = useState(false);
     const [value, setValue] = useState('');
-    const [show, setShow] = useState(false);
+    const [show, setShow] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [loading, setLoading] = useState(false);
     const isConfigured = !!savedMask;
+
+    async function startEdit() {
+        setEditing(true);
+        if (revealField && savedMask) {
+            setLoading(true);
+            try {
+                const res = await axios.get<{ value: string | null }>('/api/integrations/reveal', { params: { field: revealField } });
+                setValue(res.data.value ?? '');
+            } catch {
+                setValue('');
+            } finally {
+                setLoading(false);
+            }
+        }
+    }
 
     async function handleSave() {
         if (!value.trim()) return;
         setSaving(true);
         await onSave(value.trim());
-        setValue(''); setEditing(false); setSaving(false);
+        setValue(''); setEditing(false); setSaving(false); setShow(true);
     }
 
     return (
@@ -90,8 +107,8 @@ function KeyField({ label, description, savedMask, onSave }: {
                                 configurada
                             </span>
                         )}
-                        <button onClick={() => setEditing(true)} style={{ padding: '5px 12px', borderRadius: 7, fontSize: 12, fontWeight: 500, border: '1px solid var(--line-2)', background: 'var(--paper)', color: 'var(--ink-2)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                            {isConfigured ? 'Trocar' : 'Configurar'}
+                        <button onClick={startEdit} style={{ padding: '5px 12px', borderRadius: 7, fontSize: 12, fontWeight: 500, border: '1px solid var(--line-2)', background: 'var(--paper)', color: 'var(--ink-2)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                            {isConfigured ? 'Editar' : 'Configurar'}
                         </button>
                     </div>
                 )}
@@ -100,20 +117,23 @@ function KeyField({ label, description, savedMask, onSave }: {
                 <div style={{ display: 'flex', gap: 8, marginTop: 10, paddingLeft: 14 }}>
                     <div style={{ flex: 1, position: 'relative' }}>
                         <input
-                            type={show ? 'text' : 'password'} autoFocus value={value}
+                            type={show ? 'text' : 'password'}
+                            autoFocus
+                            value={loading ? '' : value}
                             onChange={e => setValue(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleSave()}
-                            placeholder="Cole a chave aqui"
-                            style={{ width: '100%', padding: '8px 38px 8px 12px', borderRadius: 7, fontSize: 13, border: '1px solid var(--line-2)', background: 'var(--paper-2)', color: 'var(--ink-1)', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+                            placeholder={loading ? 'Carregando…' : 'Cole a chave aqui'}
+                            disabled={loading}
+                            style={{ width: '100%', padding: '8px 38px 8px 12px', borderRadius: 7, fontSize: 13, border: '1px solid var(--line-2)', background: 'var(--paper-2)', color: 'var(--ink-1)', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', opacity: loading ? .6 : 1 }}
                         />
-                        <button type="button" onClick={() => setShow(v => !v)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-4)', padding: 0, display: 'flex', alignItems: 'center' }}>
+                        <button type="button" onClick={() => setShow(v => !v)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: show ? 'var(--accent-ink)' : 'var(--ink-4)', padding: 0, display: 'flex', alignItems: 'center' }}>
                             <EyeIcon open={show} />
                         </button>
                     </div>
-                    <button onClick={handleSave} disabled={saving || !value.trim()} style={{ padding: '8px 14px', borderRadius: 7, fontSize: 12.5, fontWeight: 500, border: '1px solid var(--accent-ink)', background: 'var(--accent)', color: '#fff', cursor: value.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: (!value.trim() || saving) ? .55 : 1 }}>
+                    <button onClick={handleSave} disabled={saving || !value.trim() || loading} style={{ padding: '8px 14px', borderRadius: 7, fontSize: 12.5, fontWeight: 500, border: '1px solid var(--accent-ink)', background: 'var(--accent)', color: '#fff', cursor: (value.trim() && !loading) ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: (!value.trim() || saving || loading) ? .55 : 1 }}>
                         {saving ? '…' : 'Salvar'}
                     </button>
-                    <button onClick={() => { setEditing(false); setValue(''); }} style={{ padding: '8px 10px', borderRadius: 7, fontSize: 12.5, border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-4)', cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+                    <button onClick={() => { setEditing(false); setValue(''); setShow(true); }} style={{ padding: '8px 10px', borderRadius: 7, fontSize: 12.5, border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-4)', cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
                 </div>
             )}
         </div>

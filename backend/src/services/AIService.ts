@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI, FunctionDeclaration, SchemaType, Tool } from "@google/generative-ai";
 import dotenv from "dotenv";
 import { calendarService } from "./CalendarService";
-import { asaasService } from "./AsaasService";
+import { asaasService, asaasServiceForTenant } from "./AsaasService";
 import { WhatsAppService } from "./WhatsAppService";
 import { prisma } from '../utils/prisma';
 
@@ -214,7 +214,7 @@ export class AIService {
         return false;
     }
 
-    private async executeToolCall(name: string, args: any, userPhone: string): Promise<{ result: any; capturedPaymentUrl?: string }> {
+    private async executeToolCall(name: string, args: any, userPhone: string, tenantId?: string): Promise<{ result: any; capturedPaymentUrl?: string }> {
         let toolResult: any;
         let capturedPaymentUrl: string | undefined;
 
@@ -267,14 +267,15 @@ export class AIService {
 
                 let asaasCustomerId = dbUser?.asaasCustomerId ?? null;
 
-                // 2. Se não tiver ID Asaas salvo, busca/cria o cliente e salva no banco
-                if (!asaasCustomerId && dbUser) {
-                    asaasCustomerId = await asaasService.getOrCreateCustomer(
+                // 2. Valida o ID salvo no Asaas atual; se estiver inválido, busca/cria por CPF.
+                if (dbUser) {
+                    const svc = tenantId ? await asaasServiceForTenant(tenantId) : asaasService;
+                    asaasCustomerId = await svc.ensureCustomer(
                         args.customerName,
                         args.cpf,
-                        userPhone
+                        userPhone,
+                        asaasCustomerId
                     );
-
                     await prisma.user.update({
                         where: { id: dbUser.id },
                         data: {
@@ -283,8 +284,6 @@ export class AIService {
                         }
                     });
                     console.log(`💾 asaasCustomerId e CPF salvos no banco.`);
-                } else if (asaasCustomerId) {
-                    console.log(`♻️  Usando asaasCustomerId já salvo: ${asaasCustomerId}`);
                 }
 
                 // 3. Calcula valor final e parcelas conforme tipo de pagamento
@@ -311,13 +310,38 @@ export class AIService {
                     toolResult = { error: 'Cliente Asaas não encontrado. Tente novamente.' };
                     return { result: toolResult };
                 }
-                const invoiceUrl = await asaasService.generatePaymentLink(
-                    asaasCustomerId,
-                    finalAmount,
-                    args.description,
-                    finalInstallments,
-                    args.firstDueDate
-                );
+                const svc2 = tenantId ? await asaasServiceForTenant(tenantId) : asaasService;
+                let invoiceUrl: string;
+                try {
+                    invoiceUrl = await svc2.generatePaymentLink(
+                        asaasCustomerId,
+                        finalAmount,
+                        args.description,
+                        finalInstallments,
+                        args.firstDueDate
+                    );
+                } catch (paymentError: any) {
+                    if (!String(paymentError?.message ?? '').includes('invalid_customer') || !dbUser) {
+                        throw paymentError;
+                    }
+
+                    console.warn(`⚠️ Cliente Asaas rejeitado na cobrança (${asaasCustomerId}). Recriando e tentando novamente.`);
+                    asaasCustomerId = await svc2.ensureCustomer(args.customerName, args.cpf, userPhone, null);
+                    await prisma.user.update({
+                        where: { id: dbUser.id },
+                        data: {
+                            asaasCustomerId,
+                            cpf: args.cpf.replace(/\D/g, ''),
+                        },
+                    });
+                    invoiceUrl = await svc2.generatePaymentLink(
+                        asaasCustomerId,
+                        finalAmount,
+                        args.description,
+                        finalInstallments,
+                        args.firstDueDate
+                    );
+                }
 
                 capturedPaymentUrl = invoiceUrl;
 
@@ -347,7 +371,8 @@ export class AIService {
                 if (!dbUser?.asaasCustomerId) {
                     toolResult = { success: false, message: 'Nenhuma cobrança encontrada para este usuário.' };
                 } else {
-                    toolResult = await asaasService.cancelPendingPayments(dbUser.asaasCustomerId);
+                    const svc3 = tenantId ? await asaasServiceForTenant(tenantId) : asaasService;
+                    toolResult = await svc3.cancelPendingPayments(dbUser.asaasCustomerId);
                     console.log(`🚫 Resultado cancel_asaas_payment:`, toolResult);
                 }
 
@@ -376,7 +401,7 @@ export class AIService {
      *
      * @param userPhone - Número de telefone do usuário (ex: "5565999999999") — usado para buscar/salvar o ID Asaas no banco.
      */
-    async generateResponse(userPhone: string, history: any[], message: string, systemInstruction: string, state: string = 'GREETING', tenantId?: string): Promise<{ text: string; paymentUrl?: string }> {
+    async generateResponse(userPhone: string, history: any[], message: string, systemInstruction: string, state: string = 'GREETING', tenantId?: string): Promise<{ text: string; paymentUrl?: string; trace?: { toolsUsed: string[]; state: string; modelId: string } }> {
         try {
             const genAI = await this.getGenAI(tenantId);
 
@@ -424,6 +449,7 @@ export class AIService {
             let capturedPaymentUrl: string | undefined;
             let calledCreateAppointment = false;
             let calledGeneratePayment = false;
+            const toolsUsed: string[] = [];
 
             // Tool-call loop: execute real functions when the model requests them
             const TOOL_LOOP_TIMEOUT_MS = 90_000; // 90s wall clock for the entire tool loop
@@ -443,11 +469,12 @@ export class AIService {
 
                 for (const toolCallPart of toolCallParts) {
                     const { name, args } = toolCallPart.functionCall as { name: string; args: any };
-                    
+
                     if (name === "create_appointment") calledCreateAppointment = true;
                     if (name === "generate_payment") calledGeneratePayment = true;
+                    if (!toolsUsed.includes(name)) toolsUsed.push(name);
 
-                    const execResult = await this.executeToolCall(name, args, userPhone);
+                    const execResult = await this.executeToolCall(name, args, userPhone, tenantId);
                     if (execResult.capturedPaymentUrl) {
                         capturedPaymentUrl = execResult.capturedPaymentUrl;
                     }
@@ -484,8 +511,9 @@ export class AIService {
                         const { name, args } = toolCallPart.functionCall as { name: string; args: any };
 
                         if (name === "generate_payment") calledGeneratePayment = true;
+                        if (!toolsUsed.includes(name)) toolsUsed.push(name);
 
-                        const execResult = await this.executeToolCall(name, args, userPhone);
+                        const execResult = await this.executeToolCall(name, args, userPhone, tenantId);
                         if (execResult.capturedPaymentUrl) {
                             capturedPaymentUrl = execResult.capturedPaymentUrl;
                         }
@@ -524,8 +552,9 @@ export class AIService {
                         const { name, args } = toolCallPart.functionCall as { name: string; args: any };
 
                         if (name === "create_appointment") calledCreateAppointment = true;
+                        if (!toolsUsed.includes(name)) toolsUsed.push(name);
 
-                        const execResult = await this.executeToolCall(name, args, userPhone);
+                        const execResult = await this.executeToolCall(name, args, userPhone, tenantId);
                         if (execResult.capturedPaymentUrl) {
                             capturedPaymentUrl = execResult.capturedPaymentUrl;
                         }
@@ -576,11 +605,16 @@ export class AIService {
                     return {
                         text: 'Desculpe, tive um problema ao processar sua solicitação. Pode repetir o que precisa?',
                         paymentUrl: capturedPaymentUrl,
+                        trace: { toolsUsed, state, modelId: 'gemini-3.1-pro-preview' },
                     };
                 }
             }
 
-            return { text: responseText, paymentUrl: capturedPaymentUrl };
+            return {
+                text: responseText,
+                paymentUrl: capturedPaymentUrl,
+                trace: { toolsUsed, state, modelId: 'gemini-3.1-pro-preview' },
+            };
 
         } catch (error: any) {
             const category = classifyError(error);

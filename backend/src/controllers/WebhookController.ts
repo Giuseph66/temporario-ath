@@ -20,9 +20,11 @@ async function sendReply(tenantId: string | undefined, to: string, text: string)
             include: { whitelistPhones: true },
         }).catch(() => null);
         if (agent?.whitelistEnabled) {
-            const allowed: string[] = agent.whitelistPhones?.map((w: any) => w.phone) ?? [];
-            if (!allowed.includes(to)) {
-                console.log(`[sendReply] BLOQUEADO — ${to.slice(0, 4)}**** não está na whitelist.`);
+            const allowedSet = new Set((agent.whitelistPhones as any[])?.map((w: any) => w.phone) ?? []);
+            const d = to.replace(/\D/g, '');
+            const variants = [d, '+'+d, ...(d.length===13&&d.startsWith('55') ? [d.slice(0,4)+d.slice(5), '+'+d.slice(0,4)+d.slice(5)] : []), ...(d.length===12&&d.startsWith('55') ? [d.slice(0,4)+'9'+d.slice(4), '+'+d.slice(0,4)+'9'+d.slice(4)] : [])];
+            if (!variants.some(v => allowedSet.has(v))) {
+                console.log(`[sendReply] BLOQUEADO — ${to.slice(0,4)}**** não está na whitelist.`);
                 return;
             }
         }
@@ -49,7 +51,7 @@ const debounceBuffer = new Map<string, BufferEntry>();
 
 const DEBOUNCE_MS = 5000; // 5 seconds of silence before processing
 
-export function scheduleProcessing(from: string, text: string, tenantId?: string, agentId?: string, messageAlreadySaved = false): void {
+export function scheduleProcessing(from: string, text: string, tenantId?: string, agentId?: string, messageAlreadySaved = false, simulatorMode = false): void {
     const existing = debounceBuffer.get(from);
 
     if (existing) {
@@ -65,7 +67,7 @@ export function scheduleProcessing(from: string, text: string, tenantId?: string
         debounceBuffer.delete(from);
         const aggregatedText = entry.texts.join('\n');
         console.log(`⏱️  Debounce expirou para ${from}. Processando ${entry.texts.length} mensagem(ns) agregada(s).`);
-        processMessages(from, aggregatedText, tenantId, agentId, messageAlreadySaved);
+        processMessages(from, aggregatedText, tenantId, agentId, messageAlreadySaved, simulatorMode);
     }, DEBOUNCE_MS);
 }
 
@@ -146,7 +148,7 @@ async function handleHumanHandoff(
 // --- BACKGROUND PROCESSOR ---
 // Runs fully independently of the HTTP request. All DB, AI, and WhatsApp
 // calls happen here, long after the 200 OK has already been sent.
-async function processMessages(from: string, messageBody: string, tenantId?: string, agentId?: string, messageAlreadySaved = false): Promise<void> {
+async function processMessages(from: string, messageBody: string, tenantId?: string, agentId?: string, messageAlreadySaved = false, simulatorMode = false): Promise<void> {
     try {
         // ── 0. Guarda isActive — revalida no momento da execução (pode ter mudado durante debounce) ──
         if (tenantId) {
@@ -165,7 +167,7 @@ async function processMessages(from: string, messageBody: string, tenantId?: str
         if (hoursSinceLastInteraction >= 24 && session.conversationState !== 'GREETING') {
             await prisma.user.update({
                 where: { id: session.id },
-                data: { conversationState: 'GREETING' },
+                data: { conversationState: 'GREETING', interactionCount: 0 },
             });
             await prisma.chatHistory.create({
                 data: { userId: session.id, role: 'system', content: '— Nova sessão (inatividade > 24h) —' },
@@ -298,6 +300,7 @@ async function processMessages(from: string, messageBody: string, tenantId?: str
         // ── 9. Generate the AI response (with smart retry) ─────────────────
         let respostaIA = '';
         let paymentUrl: string | undefined;
+        let aiTrace: Record<string, unknown> | undefined;
 
         const MAX_RETRIES = 3;
         let lastError: any = null;
@@ -331,6 +334,7 @@ async function processMessages(from: string, messageBody: string, tenantId?: str
                 );
                 respostaIA = result.text;
                 paymentUrl = result.paymentUrl;
+                aiTrace = result.trace as Record<string, unknown> | undefined;
                 break;
             } catch (err: any) {
                 lastError = err;
@@ -347,14 +351,30 @@ async function processMessages(from: string, messageBody: string, tenantId?: str
             }
         }
 
-        console.log(`🤖 Artemis Respondeu: "${respostaIA}"`);
+        // Simulador: prefixar resposta com tag visível no WhatsApp
+        const respostaEnvio = simulatorMode
+            ? `*[🤖 ARTEMIS]*\n${respostaIA}`
+            : respostaIA;
+
+        console.log(`🤖 Artemis Respondeu${simulatorMode ? ' [SIM]' : ''}: "${respostaIA.slice(0, 80)}"`);
 
         // ── 10. Save the AI response to history ───────────────────────────────
-        await stateService.addToHistory(from, 'model', respostaIA);
+        if (aiTrace) {
+            aiTrace.programsInjected = ((config.programs as any)?.programs ?? []).map((p: any) => ({
+                key: p.id,
+                name: p.name,
+                price: p.price_value,
+            }));
+            aiTrace.ragUsed = ragContext ? {
+                chars: ragContext.length,
+                snippet: ragContext.slice(0, 300),
+            } : null;
+        }
+        await stateService.addToHistory(from, 'model', respostaIA, aiTrace);
 
         // ── 11. Send the response via WhatsApp ────────────────────────────────
         if (respostaIA.trim()) {
-            await sendReply(tenantId, from, respostaIA);
+            await sendReply(tenantId, from, respostaEnvio);
         } else {
             console.warn('⚠️ Resposta vazia — mensagem não enviada ao WhatsApp.');
         }

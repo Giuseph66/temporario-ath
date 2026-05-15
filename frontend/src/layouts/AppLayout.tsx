@@ -1,19 +1,35 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
-const navItems = [
+const BASE_NAV = [
     { to: '/dashboard',    label: 'Dashboard' },
     { to: '/conversas',    label: 'Conversas' },
     { to: '/leads',        label: 'Leads' },
     { to: '/contatos',     label: 'Contatos' },
     { to: '/integracoes',  label: 'Integrações' },
     { to: '/agente',       label: 'Agente' },
+    { to: '/produtos',     label: 'Produtos' },
     { to: '/config',       label: 'Configurações' },
     { to: '/logs',         label: 'Logs' },
 ];
 
 export function AppLayout() {
     const { logout } = useAuth();
+
+    const { data: integs } = useQuery<{ asaas?: { configured: boolean } }>({
+        queryKey: ['integrations'],
+        queryFn: () => axios.get('/api/integrations').then(r => r.data),
+        staleTime: 60_000,
+    });
+
+    const asaasConfigured = integs?.asaas?.configured ?? false;
+
+    const navItems = asaasConfigured
+        ? [...BASE_NAV.slice(0, 4), { to: '/asaas', label: 'Asaas' }, ...BASE_NAV.slice(4)]
+        : BASE_NAV;
+
     return (
         <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--paper-2)' }}>
             {/* Sidebar */}

@@ -12,8 +12,10 @@ import { listLeads, getLead, listConversations, updateLeadState, updateLead, del
 import { getMetrics } from './controllers/MetricsController';
 import { getAgent, updatePersona, updatePrograms, updateSettings, toggleAgent } from './controllers/AgentController';
 import { getTenant, updateTenantKeys } from './controllers/TenantController';
-import { getIntegrations, updateEvolutionIntegration, updateAsaasIntegration, updateMetaIntegration, updateCalendarIntegration } from './controllers/IntegrationController';
+import { getIntegrations, updateEvolutionIntegration, updateAsaasIntegration, updateMetaIntegration, updateCalendarIntegration, revealIntegrationField } from './controllers/IntegrationController';
+import { disconnectGoogleCalendar, getGoogleCalendarAuthUrl, getGoogleCalendarStatus, handleGoogleCalendarCallback, testGoogleCalendar } from './controllers/GoogleCalendarIntegrationController';
 import { getLogs, clearCategory } from './controllers/LogController';
+import { asaasListPayments, asaasCreatePayment, asaasCancelPayment, asaasListCustomers, asaasCreateCustomer, asaasSimulateConfirm, asaasSimulateOverdue, asaasSimulateRefund } from './controllers/AsaasManagementController';
 import { log } from './services/LogService';
 import { getContacts, getWhitelist, updateWhitelist, addToWhitelist, removeFromWhitelist, syncContactsEndpoint, updateContactName } from './controllers/ContactController';
 import { listKnowledge, createKnowledge, deleteKnowledge } from './controllers/KnowledgeController';
@@ -73,10 +75,26 @@ app.patch('/api/tenant/keys',       requireAuth as any, updateTenantKeys as any)
 
 // Integrações — configuração por provider
 app.get('/api/integrations',                    requireAuth as any, getIntegrations as any);
+app.get('/api/integrations/reveal',             requireAuth as any, revealIntegrationField as any);
 app.patch('/api/integrations/evolution',        requireAuth as any, updateEvolutionIntegration as any);
 app.patch('/api/integrations/asaas',            requireAuth as any, updateAsaasIntegration as any);
 app.patch('/api/integrations/meta',             requireAuth as any, updateMetaIntegration as any);
 app.patch('/api/integrations/calendar',         requireAuth as any, updateCalendarIntegration as any);
+app.get('/api/integrations/google-calendar/auth-url',    requireAuth as any, getGoogleCalendarAuthUrl as any);
+app.get('/api/integrations/google-calendar/callback',    handleGoogleCalendarCallback as any);
+app.get('/api/integrations/google-calendar/status',      requireAuth as any, getGoogleCalendarStatus as any);
+app.post('/api/integrations/google-calendar/disconnect', requireAuth as any, disconnectGoogleCalendar as any);
+app.get('/api/integrations/google-calendar/test',        requireAuth as any, testGoogleCalendar as any);
+
+// Asaas — Gestão financeira
+app.get('/api/asaas/payments',                       requireAuth as any, asaasListPayments as any);
+app.post('/api/asaas/payments',                      requireAuth as any, asaasCreatePayment as any);
+app.post('/api/asaas/payments/:id/cancel',           requireAuth as any, asaasCancelPayment as any);
+app.post('/api/asaas/payments/:id/simulate/confirm', requireAuth as any, asaasSimulateConfirm as any);
+app.post('/api/asaas/payments/:id/simulate/overdue', requireAuth as any, asaasSimulateOverdue as any);
+app.post('/api/asaas/payments/:id/simulate/refund',  requireAuth as any, asaasSimulateRefund as any);
+app.get('/api/asaas/customers',                      requireAuth as any, asaasListCustomers as any);
+app.post('/api/asaas/customers',                     requireAuth as any, asaasCreateCustomer as any);
 
 // RAG — Base de Conhecimento
 app.get('/api/knowledge',         requireAuth as any, listKnowledge as any);

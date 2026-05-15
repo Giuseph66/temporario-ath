@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../utils/prisma';
+import { googleCalendarIntegrationService } from '../services/GoogleCalendarIntegrationService';
 
 type IntegrationFields = {
     geminiApiKey?: string;
@@ -20,8 +21,28 @@ function mask(val: string | null | undefined): string | null {
     return val ? '••••••••' : null;
 }
 
+const REVEAL_ALLOWLIST = new Set<keyof IntegrationFields>([
+    'geminiApiKey', 'evolutionApiKey', 'asaasApiKey', 'asaasWebhookSecret',
+    'metaAccessToken', 'metaPhoneId', 'metaVerifyToken', 'googleCalendarId',
+    'evolutionBaseUrl', 'evolutionInstance',
+]);
+
+export async function revealIntegrationField(req: AuthRequest, res: Response): Promise<Response> {
+    const field = req.query.field as string;
+    if (!field || !REVEAL_ALLOWLIST.has(field as keyof IntegrationFields)) {
+        return res.status(400).json({ error: 'Campo inválido' });
+    }
+    const tenant = await prisma.tenant.findUnique({
+        where: { id: req.tenantId },
+        select: { [field]: true } as any,
+    });
+    if (!tenant) return res.status(404).json({ error: 'Tenant não encontrado' });
+    return res.json({ value: (tenant as any)[field] ?? null });
+}
+
 export async function getIntegrations(req: AuthRequest, res: Response): Promise<Response> {
-    const t = await prisma.tenant.findUnique({
+    const [t, calendar] = await Promise.all([
+        prisma.tenant.findUnique({
         where: { id: req.tenantId },
         select: {
             evolutionApiKey: true, evolutionBaseUrl: true, evolutionInstance: true,
@@ -29,7 +50,9 @@ export async function getIntegrations(req: AuthRequest, res: Response): Promise<
             metaAccessToken: true, metaPhoneId: true, metaVerifyToken: true,
             googleCalendarId: true,
         },
-    });
+        }),
+        googleCalendarIntegrationService.getStatus({ tenantId: req.tenantId, userId: req.userId }),
+    ]);
     if (!t) return res.status(404).json({ error: 'Tenant não encontrado' });
 
     return res.json({
@@ -53,8 +76,14 @@ export async function getIntegrations(req: AuthRequest, res: Response): Promise<
             verifyToken: mask(t.metaVerifyToken),
         },
         calendar: {
-            configured: !!t.googleCalendarId,
-            calendarId: t.googleCalendarId ?? null,
+            configured: calendar.connected,
+            connected: calendar.connected,
+            status: calendar.status,
+            email: calendar.email,
+            scopes: calendar.scopes,
+            connectedAt: calendar.connectedAt,
+            revokedAt: calendar.revokedAt,
+            message: calendar.message,
         },
     });
 }

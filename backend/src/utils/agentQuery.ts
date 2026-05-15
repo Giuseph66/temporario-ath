@@ -45,6 +45,7 @@ export function serializeAgent(agent: Awaited<ReturnType<typeof getAgentFull>>) 
         whitelistEnabled:        agent.whitelistEnabled,
         ignoreGroups:            agent.ignoreGroups,
         adminChatEnabled:        agent.adminChatEnabled,
+        agentInternalMode:       agent.agentInternalMode,
         ownerPhone:              agent.ownerPhone,
         humanSupportNumber:      agent.humanSupportNumber,
         humanHandoffMessage:     agent.humanHandoffMessage,

@@ -11,7 +11,9 @@ import { Conversas } from './pages/Conversas';
 import { Agente } from './pages/Agente';
 import { Integracoes } from './pages/Integracoes';
 import { Contatos } from './pages/Contatos';
+import { Produtos } from './pages/Produtos';
 import { Logs } from './pages/Logs';
+import { Asaas } from './pages/Asaas';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
     const { accessToken } = useAuth();
@@ -34,8 +36,10 @@ function App() {
                         <Route path="integracoes" element={<Integracoes />} />
                         <Route path="contatos"    element={<Contatos />} />
                         <Route path="agente"      element={<Agente />} />
+                        <Route path="produtos"    element={<Produtos />} />
                         <Route path="config"      element={<Settings />} />
                         <Route path="logs"        element={<Logs />} />
+                        <Route path="asaas"       element={<Asaas />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>

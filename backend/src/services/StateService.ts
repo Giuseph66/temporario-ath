@@ -53,7 +53,7 @@ export class StateService {
     }
 
     // Função para salvar uma nova mensagem
-    public async addToHistory(phoneNumber: string, role: string, content: string) {
+    public async addToHistory(phoneNumber: string, role: string, content: string, trace?: Record<string, unknown>) {
         const user = await prisma.user.findFirst({ where: { phoneNumber } });
         if (!user) return;
 
@@ -61,7 +61,8 @@ export class StateService {
             data: {
                 userId: user.id,
                 role: role,
-                content: content
+                content: content,
+                ...(trace ? { trace: trace as any } : {}),
             }
         });
 
