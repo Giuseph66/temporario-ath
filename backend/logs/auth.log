@@ -50,3 +50,13 @@
 {"ts":"2026-05-15T07:14:00.338Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
 {"ts":"2026-05-15T18:24:08.947Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
 {"ts":"2026-05-15T18:43:08.687Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
+{"ts":"2026-05-16T17:13:41.648Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
+{"ts":"2026-05-17T04:20:53.897Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
+{"ts":"2026-05-17T05:29:50.762Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"2e9e7b57-84dd-4711-9546-bcaaa6163a11"}}
+{"ts":"2026-05-17T07:00:45.397Z","level":"warn","category":"auth","msg":"Login falhou: email não encontrado","data":{"email":"admin@confluence.com"}}
+{"ts":"2026-05-17T07:01:25.579Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}
+{"ts":"2026-05-17T07:02:17.342Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}
+{"ts":"2026-05-17T07:08:10.848Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}
+{"ts":"2026-05-17T07:19:35.130Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}
+{"ts":"2026-05-17T07:20:54.895Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}
+{"ts":"2026-05-17T07:21:00.410Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}

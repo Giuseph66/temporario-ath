@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { AppLayout } from './layouts/AppLayout';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
@@ -14,6 +15,9 @@ import { Contatos } from './pages/Contatos';
 import { Produtos } from './pages/Produtos';
 import { Logs } from './pages/Logs';
 import { Asaas } from './pages/Asaas';
+import { Simulador } from './pages/Simulador';
+import { Memorias } from './pages/Memorias';
+import { Automacoes } from './pages/Automacoes';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
     const { accessToken } = useAuth();
@@ -22,6 +26,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
     return (
+        <ThemeProvider>
         <AuthProvider>
             <BrowserRouter>
                 <Routes>
@@ -36,15 +41,19 @@ function App() {
                         <Route path="integracoes" element={<Integracoes />} />
                         <Route path="contatos"    element={<Contatos />} />
                         <Route path="agente"      element={<Agente />} />
+                        <Route path="memorias"    element={<Memorias />} />
+                        <Route path="automacoes"  element={<Automacoes />} />
                         <Route path="produtos"    element={<Produtos />} />
                         <Route path="config"      element={<Settings />} />
                         <Route path="logs"        element={<Logs />} />
                         <Route path="asaas"       element={<Asaas />} />
+                        <Route path="simulador"   element={<Simulador />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>
             </BrowserRouter>
         </AuthProvider>
+        </ThemeProvider>
     );
 }
 

@@ -44,6 +44,12 @@ export const EvolutionService = {
         });
     },
 
+    async instanceExists(instanceName: string): Promise<boolean> {
+        const res = await getClient().get('/instance/fetchInstances');
+        const instances = res.data as Array<{ name?: string; instanceName?: string }>;
+        return instances.some(i => i.name === instanceName || i.instanceName === instanceName);
+    },
+
     async disconnect(instance: string): Promise<void> {
         await getClient().delete(`/instance/logout/${instance}`);
     },
@@ -87,6 +93,19 @@ export const EvolutionService = {
                 }));
         } catch {
             return [];
+        }
+    },
+
+    async getMediaBase64(instance: string, messageData: object): Promise<{ base64: string; mediaType: string } | null> {
+        try {
+            const res = await getClient().post(`/chat/getBase64FromMediaMessage/${instance}`, {
+                message: messageData,
+            });
+            const data = res.data as { base64?: string; mediaType?: string };
+            if (!data?.base64) return null;
+            return { base64: data.base64, mediaType: data.mediaType ?? 'application/octet-stream' };
+        } catch {
+            return null;
         }
     },
 

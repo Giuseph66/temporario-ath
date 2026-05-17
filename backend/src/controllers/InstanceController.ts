@@ -9,7 +9,10 @@ export async function createInstance(req: AuthRequest, res: Response): Promise<R
         if (!tenant) return res.status(404).json({ error: 'Tenant não encontrado' });
 
         const instanceName = `artemis-${tenant.slug}`;
-        await EvolutionService.createInstance(instanceName);
+        const exists = await EvolutionService.instanceExists(instanceName);
+        if (!exists) {
+            await EvolutionService.createInstance(instanceName);
+        }
         await EvolutionService.setWebhook(instanceName);
 
         await prisma.tenant.update({
@@ -17,7 +20,7 @@ export async function createInstance(req: AuthRequest, res: Response): Promise<R
             data: { evolutionInstance: instanceName },
         });
 
-        return res.json({ instance: instanceName, webhookConfigured: true });
+        return res.json({ instance: instanceName, existing: exists, webhookConfigured: true });
     } catch (err: any) {
         const status = err?.response?.status;
         if (status === 401) return res.status(400).json({ error: 'API Key da Evolution inválida. Verifique EVOLUTION_API_KEY no .env.' });

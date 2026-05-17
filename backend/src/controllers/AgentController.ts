@@ -3,6 +3,18 @@ import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../utils/prisma';
 import { getAgentFull, serializeAgent } from '../utils/agentQuery';
 
+function asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function asStringArray(value: unknown): string[] {
+    return Array.isArray(value) ? value.map(String).map(s => s.trim()).filter(Boolean) : [];
+}
+
+function requiredText(value: unknown): boolean {
+    return typeof value === 'string' && value.trim().length > 0;
+}
+
 // ── GET /api/agent ────────────────────────────────────────────────────────────
 export async function getAgent(req: AuthRequest, res: Response): Promise<Response> {
     const agent = await getAgentFull({ tenantId: req.tenantId });
@@ -14,17 +26,50 @@ export async function getAgent(req: AuthRequest, res: Response): Promise<Respons
 export async function updatePersona(req: AuthRequest, res: Response): Promise<Response> {
     const body = req.body as Record<string, unknown>;
 
-    const agent = await prisma.agent.findFirst({ where: { tenantId: req.tenantId } });
+    const agent = await getAgentFull({ tenantId: req.tenantId });
     if (!agent) return res.status(404).json({ error: 'Agente não encontrado' });
 
     // Accept both new flat fields and legacy personaJson wrapper
     const src: Record<string, unknown> = (body.personaJson as Record<string, unknown>) ?? body;
+    const missing: string[] = [];
+
+    if (src.name !== undefined && !requiredText(src.name)) missing.push('Nome do agente');
+    if (src.role !== undefined && !requiredText(src.role)) missing.push('Papel / descrição da IA');
+
+    const tone = src.toneJson ?? src.tone;
+    if (tone !== undefined) {
+        const toneObj = asRecord(tone);
+        if (!asStringArray(toneObj.primary).length) missing.push('Tons principais');
+        if (!requiredText(toneObj.formatting)) missing.push('Formatação');
+        if (!requiredText(toneObj.emoji_rules)) missing.push('Regras de emoji');
+        if (!requiredText(toneObj.ai_identity)) missing.push('Identidade da IA');
+    }
+
+    const protocols = asRecord(src.protocols);
+    if (src.protocols !== undefined) {
+        if (!requiredText(protocols.human_contact_link)) missing.push('Link de atendimento humano');
+        if (!requiredText(protocols.registration_link ?? protocols.respondi_form_link)) {
+            missing.push('Link de formulário / cadastro');
+        }
+    }
+
+    if (src.absolute_restrictions !== undefined && !asStringArray(src.absolute_restrictions).length) {
+        missing.push('Restrições absolutas');
+    }
+
+    if (missing.length) {
+        return res.status(400).json({
+            error: `Preencha os campos obrigatórios: ${missing.join(', ')}`,
+            fields: missing,
+        });
+    }
 
     const data: Record<string, unknown> = {};
     if (src.name     !== undefined) data.name     = String(src.name);
     if (src.role     !== undefined) data.role     = String(src.role);
     if (src.language !== undefined) data.language = String(src.language);
-    const tone = src.toneJson ?? src.tone;
+    if (src.whatsappNumber !== undefined) data.whatsappNumber = String(src.whatsappNumber).trim() || null;
+    if (src.geminiModel !== undefined) data.geminiModel = String(src.geminiModel);
     if (tone) data.toneJson = tone as object;
     const qual = src.qualificationJson ?? src.qualification;
     if (qual) data.qualificationJson = qual as any;
@@ -38,8 +83,7 @@ export async function updatePersona(req: AuthRequest, res: Response): Promise<Re
     }
 
     // Protocols
-    const protocols = src.protocols as Record<string, string> | undefined;
-    if (protocols && typeof protocols === 'object') {
+    if (src.protocols && typeof src.protocols === 'object') {
         for (const [key, value] of Object.entries(protocols)) {
             if (typeof value !== 'string') continue;
             await prisma.agentProtocol.upsert({

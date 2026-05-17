@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import { WhatsAppService } from '../services/WhatsAppService';
 import { EvolutionService } from '../services/EvolutionService';
+import { automationService } from '../services/AutomationService';
 
 const whatsapp = new WhatsAppService();
 
@@ -112,6 +113,13 @@ export const handleAsaasWebhook = async (req: Request, res: Response): Promise<v
             `Seja muito bem-vindo(a)! 🚀`;
 
         await sendAsaasNotification(effectiveTenantId, user.phoneNumber, confirmationMessage);
+        if (effectiveTenantId) {
+            await automationService.handleEvent(effectiveTenantId, 'PAYMENT_CONFIRMED', {
+                userId: user.id,
+                paymentId,
+                value: valueRaw,
+            });
+        }
         console.log(`📲 [AsaasWebhook] Confirmação enviada via ${effectiveTenantId ? 'Evolution' : 'Meta'}. Status: ENROLLED.`);
 
     } catch (error) {

@@ -32,8 +32,11 @@ model Tenant {
   agents            Agent[]
   tenantUsers       TenantUser[]
   googleCalendarIntegrations UserGoogleCalendarIntegration[]
-  knowledgeDocs     KnowledgeDocument[]
-  contacts          Contact[]
+  knowledgeDocs       KnowledgeDocument[]
+  contacts            Contact[]
+  simulatorSessions   SimulatorSession[]
+  automations         Automation[]
+  automationRuns      AutomationRun[]
 }
 
 model TenantUser {
@@ -241,8 +244,80 @@ model User {
   tenant           Tenant?          @relation(fields: [tenantId], references: [id])
   agent            Agent?           @relation(fields: [agentId], references: [id])
   messages         ChatHistory[]
+  automationTargets AutomationTargetRun[]
 
   @@unique([phoneNumber, tenantId])
+}
+
+// ─── Automações Contextuais ──────────────────────────────────────────────────
+
+model Automation {
+  id               String   @id @default(uuid())
+  tenantId         String
+  name             String
+  type             String
+  status           String   @default("DRAFT")
+  triggerType      String
+  scheduleJson     Json     @default("{}")
+  targetJson       Json     @default("{}")
+  conditionsJson   Json     @default("{}")
+  actionJson       Json     @default("{}")
+  limitsJson       Json     @default("{}")
+  requiresApproval Boolean  @default(false)
+  nextRunAt        DateTime?
+  lastRunAt        DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  runs             AutomationRun[]
+  targetRuns       AutomationTargetRun[]
+
+  @@index([tenantId])
+  @@index([status, nextRunAt])
+  @@index([triggerType])
+}
+
+model AutomationRun {
+  id             String   @id @default(uuid())
+  tenantId       String
+  automationId   String
+  status         String   @default("RUNNING")
+  startedAt      DateTime @default(now())
+  finishedAt     DateTime?
+  sentCount      Int      @default(0)
+  skippedCount   Int      @default(0)
+  failedCount    Int      @default(0)
+  error          String?  @db.Text
+  triggerPayload Json?
+
+  tenant         Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  automation     Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  targets        AutomationTargetRun[]
+
+  @@index([tenantId])
+  @@index([automationId, startedAt])
+}
+
+model AutomationTargetRun {
+  id            String   @id @default(uuid())
+  tenantId      String
+  automationId  String
+  runId         String
+  userId        String?
+  status        String
+  reason        String?  @db.Text
+  message       String?  @db.Text
+  trace         Json?
+  createdAt     DateTime @default(now())
+
+  automation    Automation  @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  run           AutomationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([automationId, userId, createdAt])
+  @@index([runId])
 }
 
 // ─── Cache de contatos da Evolution ─────────────────────────────────────────
@@ -292,6 +367,22 @@ model KnowledgeChunk {
   @@index([tenantId])
 }
 
+// ─── Sessões do Simulador ─────────────────────────────────────────────────────
+
+model SimulatorSession {
+  id          String   @id @default(uuid())
+  tenantId    String
+  title       String   @default("Nova sessão")
+  agentType   String   @default("atendente")
+  convState   String   @default("GREETING")
+  simMode     String   @default("cliente")
+  messages    Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
 // ─── Histórico de Conversas ───────────────────────────────────────────────────
 
 model ChatHistory {
@@ -300,6 +391,7 @@ model ChatHistory {
   role      String
   content   String
   trace     Json?
+  media     Json?
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

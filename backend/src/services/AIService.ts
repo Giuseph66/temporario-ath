@@ -169,6 +169,29 @@ const cancelAsaasPaymentDecl: FunctionDeclaration = {
     }
 };
 
+const createFollowUpDecl: FunctionDeclaration = {
+    name: "create_follow_up",
+    description: "Cria uma tarefa futura para chamar novamente APENAS o lead atual. Use somente quando o cliente pedir retorno futuro ou demonstrar interesse para continuar depois. Nunca use para campanhas em massa.",
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            runAt: {
+                type: SchemaType.STRING,
+                description: "Data e hora futura em ISO 8601 para executar o follow-up. Ex: 2026-06-17T09:00:00-04:00"
+            },
+            messageTemplate: {
+                type: SchemaType.STRING,
+                description: "Mensagem curta que sera enviada no WhatsApp. Pode usar {{firstName}}."
+            },
+            reason: {
+                type: SchemaType.STRING,
+                description: "Motivo interno do follow-up, para auditoria e memoria do agente."
+            }
+        },
+        required: ["runAt", "messageTemplate", "reason"]
+    }
+};
+
 export class AIService {
     // Resolve chave Gemini: banco do tenant > env > erro
     private async resolveApiKey(tenantId?: string): Promise<string> {
@@ -187,6 +210,41 @@ export class AIService {
     private async getGenAI(tenantId?: string): Promise<GoogleGenerativeAI> {
         const apiKey = await this.resolveApiKey(tenantId);
         return new GoogleGenerativeAI(apiKey);
+    }
+
+    async generateAutomationMessage(
+        tenantId: string,
+        input: { prompt: string; lead: Record<string, unknown>; automationName: string }
+    ): Promise<string> {
+        const genAI = await this.getGenAI(tenantId);
+        const prompt = `
+Crie uma mensagem curta de WhatsApp em portugues do Brasil.
+Use tom humano, direto e respeitoso.
+Nao diga que a mensagem e automatica.
+Nao invente dados.
+Retorne apenas a mensagem final.
+
+Automacao: ${input.automationName}
+Lead: ${JSON.stringify(input.lead)}
+Instrucao: ${input.prompt}
+`;
+
+        let lastError: unknown;
+        for (const modelId of ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']) {
+            try {
+                const model = genAI.getGenerativeModel({
+                    model: modelId,
+                    generationConfig: { temperature: 0.3, topP: 0.85 },
+                }, { timeout: 30_000 });
+                const result = await model.generateContent(prompt);
+                const text = result.response.text().replace(/\*\*/g, '*').trim();
+                if (text) return text;
+            } catch (error) {
+                lastError = error;
+            }
+        }
+
+        throw lastError instanceof Error ? lastError : new Error('Falha ao gerar mensagem da automação.');
     }
 
     private isModelReasoning(text: string): boolean {
@@ -365,6 +423,43 @@ export class AIService {
                 };
                 console.log(`✅ Link de pagamento gerado com sucesso: ${invoiceUrl}`);
 
+            } else if (name === "create_follow_up") {
+                const dbUser = await prisma.user.findFirst({ where: { phoneNumber: userPhone } });
+                const effectiveTenantId = tenantId ?? dbUser?.tenantId;
+                const runAt = new Date(args.runAt);
+
+                if (!dbUser || !effectiveTenantId) {
+                    toolResult = { error: 'Lead nao encontrado para criar follow-up.' };
+                } else if (Number.isNaN(runAt.getTime()) || runAt <= new Date()) {
+                    toolResult = { error: 'Data do follow-up invalida ou no passado.' };
+                } else {
+                    await prisma.automation.create({
+                        data: {
+                            tenantId: effectiveTenantId,
+                            name: `Follow-up - ${dbUser.name ?? dbUser.phoneNumber}`,
+                            type: 'ONE_OFF',
+                            status: 'ACTIVE',
+                            triggerType: 'TIME',
+                            scheduleJson: { runAt: runAt.toISOString() },
+                            targetJson: { userId: dbUser.id },
+                            conditionsJson: {
+                                requireLgpd: true,
+                                skipGroups: true,
+                                sendWindow: { start: '08:00', end: '18:00' },
+                                excludeEnrollmentStatuses: ['ENROLLED', 'CANCELLED'],
+                            },
+                            actionJson: {
+                                messageTemplate: args.messageTemplate,
+                                internalNote: `[AUTOMACAO INTERNA] Follow-up criado pelo agente. Motivo: ${args.reason}`,
+                            },
+                            limitsJson: { cooldownHours: 0 },
+                            requiresApproval: false,
+                            nextRunAt: runAt,
+                        },
+                    });
+                    toolResult = { ok: true, runAt: runAt.toISOString(), message: 'Follow-up criado.' };
+                }
+
             } else if (name === "cancel_asaas_payment") {
                 console.log(`🚫 Artemis chamou cancel_asaas_payment para ${userPhone}`);
                 const dbUser = await prisma.user.findFirst({ where: { phoneNumber: userPhone } });
@@ -406,7 +501,7 @@ export class AIService {
             const genAI = await this.getGenAI(tenantId);
 
             // Filter tools based on current conversation state
-            const activeToolDecls: FunctionDeclaration[] = [];
+            const activeToolDecls: FunctionDeclaration[] = [createFollowUpDecl];
             if (['PROGRAM_PRESENTATION', 'OBJECTION_HANDLING', 'CLOSING'].includes(state)) {
                 activeToolDecls.push(checkAvailabilityDecl, createAppointmentDecl, findAppointmentsDecl, cancelAppointmentDecl);
             }

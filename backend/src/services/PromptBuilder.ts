@@ -12,6 +12,14 @@
 import { ConversationState } from '../types/user';
 import { Config } from '../types/config';
 
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+}
+
+function asObject(value: unknown): Record<string, any> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, any> : {};
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Blocos reutilizáveis de instrução
 // ──────────────────────────────────────────────────────────────────────────────
@@ -36,15 +44,15 @@ function buildIdentityBlock(config: Config): string {
  * Bloco de tom e formatação — presente em TODOS os estados.
  */
 function buildToneBlock(config: Config): string {
-  const { tone } = config.persona;
-  const primary = tone.primary.join(', ');
+  const tone = asObject(config.persona.tone);
+  const primary = asStringArray(tone.primary).join(', ') || 'humano, claro, consultivo';
 
   return `
   <tone>
     Tom: ${primary}.
-    Formatação: ${tone.formatting}
-    Emojis: ${tone.emoji_rules}
-    Identidade IA: ${tone.ai_identity}
+    Formatação: ${tone.formatting ?? 'mensagens curtas e fáceis de ler'}
+    Emojis: ${tone.emoji_rules ?? 'use com moderação'}
+    Identidade IA: ${tone.ai_identity ?? 'não finja ser humano'}
   </tone>`.trim();
 }
 
@@ -214,11 +222,11 @@ function buildObjectionHandlingBlock(config: Config): string {
   </objection_protocol>`.trim();
   }
 
-  const layer1 = objection_handling.layer_1_soft.map((q: string) => `- "${q}"`).join('\n    ');
-  const layer2 = objection_handling.layer_2_medium.map((q: string) => `- "${q}"`).join('\n    ');
-  const layer3 = objection_handling.layer_3_direct.map((q: string) => `- "${q}"`).join('\n    ');
+  const layer1 = asStringArray(objection_handling.layer_1_soft).map((q: string) => `- "${q}"`).join('\n    ');
+  const layer2 = asStringArray(objection_handling.layer_2_medium).map((q: string) => `- "${q}"`).join('\n    ');
+  const layer3 = asStringArray(objection_handling.layer_3_direct).map((q: string) => `- "${q}"`).join('\n    ');
 
-  const tactics = Object.entries(objection_handling.tactics)
+  const tactics = Object.entries(asObject(objection_handling.tactics))
     .map(([trigger, response]: [string, any]) => `- "${trigger}": ${response}`)
     .join('\n    ');
 
@@ -319,7 +327,7 @@ function buildClosingBlock(config: Config, lastPaymentUrl?: string | null, cpf?:
 
     Confirme o próximo passo explicitamente antes de gerar qualquer cobrança.
     Regras de contrato:
-    ${(config.persona as any).knowledge_base_contracts?.rules?.map((r: string) => `- ${r}`).join('\n    ') || ''}
+    ${asStringArray((config.persona as any).knowledge_base_contracts?.rules).map((r: string) => `- ${r}`).join('\n    ') || ''}
     Descontos disponíveis (aplicáveis a TODOS os programas EXCETO Terapia PRM):
     - Semestral: 5% de desconto no pagamento integral do semestre (cobrança única).
     - Anual: 7% de desconto no pagamento integral do ano/12 meses (cobrança única).

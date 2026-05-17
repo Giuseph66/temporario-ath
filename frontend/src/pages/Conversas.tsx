@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import { MediaBubble, type MediaMeta } from '../components/MediaBubble';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,7 +33,7 @@ type LeadDetail = {
     lgpdConsent: boolean;
     asaasCustomerId?: string | null;
     lastPaymentUrl?: string | null;
-    messages: { id: string; role: string; content: string; createdAt: string; trace?: { toolsUsed: string[]; state: string; modelId: string; programsInjected?: { key: string; name: string; price: number }[]; ragUsed?: { chars: number; snippet: string } | null } | null }[];
+    messages: { id: string; role: string; content: string; createdAt: string; trace?: { toolsUsed: string[]; state: string; modelId: string; programsInjected?: { key: string; name: string; price: number }[]; ragUsed?: { chars: number; snippet: string } | null } | null; media?: MediaMeta | null }[];
 };
 
 // ─── Mock data (used when no real conversations exist) ────────────────────────
@@ -40,20 +41,20 @@ type LeadDetail = {
 // ─── State machine metadata ───────────────────────────────────────────────────
 
 const STATE_META: Record<string, { label: string; color: string; bg: string; desc: string }> = {
-    GREETING:             { label: 'Saudação',       color: '#6366f1', bg: '#eef2ff', desc: 'Agente coletando consentimento LGPD' },
-    QUALIFICATION:        { label: 'Qualificação',   color: '#0891b2', bg: '#ecfeff', desc: 'Coletando perfil: idade e objetivo' },
-    PROGRAM_PRESENTATION: { label: 'Apresentação',   color: '#7c3aed', bg: '#f5f3ff', desc: 'Apresentando programas disponíveis' },
-    OBJECTION_HANDLING:   { label: 'Objeções',       color: '#b45309', bg: '#fef3c7', desc: 'Respondendo dúvidas e objeções' },
-    CLOSING:              { label: 'Fechamento',      color: '#3d7a5e', bg: '#e8f0ec', desc: 'Enviando link de pagamento' },
-    HUMAN_HANDOFF:        { label: 'Atendimento humano', color: '#dc2626', bg: '#fef2f2', desc: 'Transferido para equipe humana' },
-    ORIENTADOR:           { label: 'Orientador',      color: '#0f766e', bg: '#ccfbf1', desc: 'Assistente interno do sistema' },
+    GREETING:             { label: 'Saudação',           color: 'var(--purple)',      bg: 'var(--purple-soft)', desc: 'Agente coletando consentimento LGPD' },
+    QUALIFICATION:        { label: 'Qualificação',       color: 'var(--blue)',        bg: 'var(--blue-soft)',   desc: 'Coletando perfil: idade e objetivo' },
+    PROGRAM_PRESENTATION: { label: 'Apresentação',       color: 'var(--purple)',      bg: 'var(--purple-soft)', desc: 'Apresentando programas disponíveis' },
+    OBJECTION_HANDLING:   { label: 'Objeções',           color: 'var(--amber)',       bg: 'var(--amber-soft)',  desc: 'Respondendo dúvidas e objeções' },
+    CLOSING:              { label: 'Fechamento',          color: 'var(--accent)',      bg: 'var(--accent-soft)', desc: 'Enviando link de pagamento' },
+    HUMAN_HANDOFF:        { label: 'Atendimento humano', color: 'var(--danger)',      bg: 'var(--danger-soft)', desc: 'Transferido para equipe humana' },
+    ORIENTADOR:           { label: 'Orientador',          color: 'var(--teal)',        bg: 'var(--teal-soft)',   desc: 'Assistente interno do sistema' },
 };
 
 const ENROLLMENT_META: Record<string, { label: string; color: string; bg: string }> = {
-    LEAD:            { label: 'Lead',               color: '#555', bg: '#f3f1ee' },
-    PAYMENT_PENDING: { label: 'Aguard. pagamento',  color: '#b45309', bg: '#fef3c7' },
-    ENROLLED:        { label: 'Matriculado',         color: '#3d7a5e', bg: '#e8f0ec' },
-    CANCELLED:       { label: 'Cancelado',           color: '#dc2626', bg: '#fef2f2' },
+    LEAD:            { label: 'Lead',               color: 'var(--ink-3)',  bg: 'var(--paper-3)'    },
+    PAYMENT_PENDING: { label: 'Aguard. pagamento',  color: 'var(--amber)', bg: 'var(--amber-soft)' },
+    ENROLLED:        { label: 'Matriculado',         color: 'var(--accent)', bg: 'var(--accent-soft)' },
+    CANCELLED:       { label: 'Cancelado',           color: 'var(--danger)', bg: 'var(--danger-soft)' },
 };
 
 // Infer state transitions from message sequence (simplified heuristic)
@@ -274,21 +275,21 @@ function EditableName({ name, onSave }: { name: string | null; onSave: (v: strin
 // ─── Tool metadata ─────────────────────────────────────────────────────────────
 
 const TOOL_META: Record<string, { label: string; icon: string; color: string }> = {
-    check_available_slots:  { label: 'Verificar disponibilidade', icon: '📅', color: '#0891b2' },
-    create_appointment:     { label: 'Criar agendamento',          icon: '✅', color: '#3d7a5e' },
-    find_appointments:      { label: 'Buscar agendamentos',        icon: '🔍', color: '#6366f1' },
-    cancel_appointment:     { label: 'Cancelar agendamento',       icon: '🗑️', color: '#b45309' },
-    generate_payment:       { label: 'Gerar cobrança',             icon: '💳', color: '#7c3aed' },
-    cancel_asaas_payment:   { label: 'Cancelar cobrança',          icon: '🚫', color: '#dc2626' },
-    admin_check_calendar_availability: { label: 'Verificar agenda', icon: '📅', color: '#0891b2' },
-    admin_create_calendar_event:       { label: 'Criar evento',     icon: '✅', color: '#3d7a5e' },
-    admin_find_calendar_events:         { label: 'Buscar eventos',   icon: '🔍', color: '#6366f1' },
-    admin_cancel_calendar_event:        { label: 'Cancelar evento',  icon: '🗑️', color: '#b45309' },
-    admin_create_asaas_customer:        { label: 'Criar cliente Asaas', icon: '👤', color: '#0f766e' },
-    admin_list_asaas_customers:         { label: 'Listar clientes Asaas', icon: '📋', color: '#0891b2' },
-    admin_create_asaas_payment:         { label: 'Criar cobrança Asaas', icon: '💳', color: '#7c3aed' },
-    admin_list_asaas_payments:          { label: 'Listar cobranças Asaas', icon: '📄', color: '#b45309' },
-    admin_update_asaas_payment:         { label: 'Atualizar cobrança Asaas', icon: '✏️', color: '#7c3aed' },
+    check_available_slots:  { label: 'Verificar disponibilidade',   icon: '📅', color: 'var(--blue)'   },
+    create_appointment:     { label: 'Criar agendamento',            icon: '✅', color: 'var(--teal)'   },
+    find_appointments:      { label: 'Buscar agendamentos',          icon: '🔍', color: 'var(--purple)' },
+    cancel_appointment:     { label: 'Cancelar agendamento',         icon: '🗑️', color: 'var(--amber)'  },
+    generate_payment:       { label: 'Gerar cobrança',               icon: '💳', color: 'var(--purple)' },
+    cancel_asaas_payment:   { label: 'Cancelar cobrança',            icon: '🚫', color: 'var(--danger)' },
+    admin_check_calendar_availability: { label: 'Verificar agenda',  icon: '📅', color: 'var(--blue)'   },
+    admin_create_calendar_event:       { label: 'Criar evento',      icon: '✅', color: 'var(--teal)'   },
+    admin_find_calendar_events:        { label: 'Buscar eventos',    icon: '🔍', color: 'var(--purple)' },
+    admin_cancel_calendar_event:       { label: 'Cancelar evento',   icon: '🗑️', color: 'var(--amber)'  },
+    admin_create_asaas_customer:       { label: 'Criar cliente Asaas',   icon: '👤', color: 'var(--teal)'   },
+    admin_list_asaas_customers:        { label: 'Listar clientes Asaas', icon: '📋', color: 'var(--blue)'   },
+    admin_create_asaas_payment:        { label: 'Criar cobrança Asaas',  icon: '💳', color: 'var(--purple)' },
+    admin_list_asaas_payments:         { label: 'Listar cobranças Asaas',icon: '📄', color: 'var(--amber)'  },
+    admin_update_asaas_payment:        { label: 'Atualizar cobrança Asaas', icon: '✏️', color: 'var(--purple)' },
 };
 
 type TraceData = { toolsUsed: string[]; state: string; modelId: string; programsInjected?: { key: string; name: string; price: number }[]; ragUsed?: { chars: number; snippet: string } | null };
@@ -327,7 +328,7 @@ function TraceModal({ trace, onClose }: { trace: TraceData; onClose: () => void 
 
                 {/* Badges */}
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#eef2ff', color: '#6366f1', border: '1px solid #c7d2fe' }}>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, padding: '3px 10px', borderRadius: 20, background: 'var(--purple-soft)', color: 'var(--purple)', border: '1px solid var(--purple)' }}>
                         {trace.modelId}
                     </span>
                     {(() => {
@@ -397,12 +398,12 @@ function TraceModal({ trace, onClose }: { trace: TraceData; onClose: () => void 
                         Contexto RAG
                     </div>
                     {trace.ragUsed ? (
-                        <div style={{ padding: '10px 14px', borderRadius: 10, background: '#fef3c7', border: '1px solid #fbbf24' }}>
+                        <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--amber-soft)', border: '1px solid var(--amber)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                                <span style={{ fontSize: 12, fontWeight: 600, color: '#92400e' }}>RAG ativo</span>
-                                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: '#b45309' }}>{trace.ragUsed.chars.toLocaleString()} chars</span>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--amber)' }}>RAG ativo</span>
+                                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'var(--amber)' }}>{trace.ragUsed.chars.toLocaleString()} chars</span>
                             </div>
-                            <div style={{ fontSize: 11.5, color: '#78350f', lineHeight: 1.5, fontStyle: 'italic', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                            <div style={{ fontSize: 11.5, color: 'var(--ink-2)', lineHeight: 1.5, fontStyle: 'italic', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                 "{trace.ragUsed.snippet}{trace.ragUsed.chars > 300 ? '…' : ''}"
                             </div>
                         </div>
@@ -676,26 +677,28 @@ export function Conversas() {
                                             onClick={() => hasTrace && msg.trace && setTraceModal(msg.trace)}
                                             style={{
                                                 maxWidth: '68%',
-                                                background: isOperator ? '#eef2ff' : isAgent ? 'var(--ink-1)' : isUrl ? 'var(--paper-2)' : 'var(--paper)',
-                                                border: `1px solid ${isOperator ? '#c7d2fe' : isAgent ? (hasTrace ? 'rgba(99,102,241,.35)' : 'transparent') : 'var(--line)'}`,
+                                                background: isOperator ? 'var(--bubble-operator-bg)' : isAgent ? 'var(--bubble-agent-bg)' : isUrl ? 'var(--paper-2)' : 'var(--paper)',
+                                                border: `1px solid ${isOperator ? 'var(--purple)' : isAgent ? (hasTrace ? 'var(--purple)' : 'transparent') : 'var(--line)'}`,
                                                 borderRadius: isRight ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                                                 padding: '10px 14px',
                                                 cursor: hasTrace ? 'pointer' : 'default',
                                             }}
                                             title={hasTrace ? 'Clique para ver trace' : undefined}
                                         >
-                                            {isUrl ? (
+                                            {msg.media ? (
+                                                <MediaBubble messageId={msg.id} media={msg.media} isAgent={isAgent} />
+                                            ) : isUrl ? (
                                                 <a href={msg.content} target="_blank" rel="noreferrer" style={{ fontFamily: "'Geist Mono', monospace", fontSize: 12, color: 'var(--accent-ink)', wordBreak: 'break-all', textDecoration: 'underline' }}>
                                                     {msg.content}
                                                 </a>
                                             ) : (
-                                                <div style={{ fontSize: 13.5, lineHeight: 1.55, color: isAgent ? '#f1ecdc' : isOperator ? '#3730a3' : 'var(--ink-1)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                                <div style={{ fontSize: 13.5, lineHeight: 1.55, color: isAgent ? 'var(--bubble-agent-color)' : isOperator ? 'var(--bubble-operator-color)' : 'var(--ink-1)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                                     {msg.content}
                                                 </div>
                                             )}
-                                            <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9.5, color: isAgent ? 'rgba(241,236,220,.45)' : 'var(--ink-5)', marginTop: 5, textAlign: 'right', display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
-                                                {isOperator && <span style={{ color: '#6366f1', fontSize: 9 }}>operador</span>}
-                                                {isOrientador && <span style={{ color: '#5eead4', fontSize: 9 }}>orientador</span>}
+                                            <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9.5, color: isAgent ? 'var(--bubble-agent-color)' : 'var(--ink-5)', marginTop: 5, textAlign: 'right', display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center', opacity: isAgent ? 0.45 : 1 }}>
+                                                {isOperator && <span style={{ color: 'var(--purple)', fontSize: 9 }}>operador</span>}
+                                                {isOrientador && <span style={{ color: 'var(--teal)', fontSize: 9 }}>orientador</span>}
                                                 {hasTrace && <span style={{ fontSize: 9, opacity: .6 }}>🔍</span>}
                                                 {formatTime(msg.createdAt)}
                                             </div>

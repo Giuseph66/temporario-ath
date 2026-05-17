@@ -72,14 +72,60 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
         // Grupos usam o JID bruto como identificador; contatos passam pela normalização BR
         const phoneNumber = isGroup ? rawPhone : normalizeBrazilianPhone(rawPhone);
 
+        const msg = (data as any)?.message ?? {};
+
         const messageText: string =
-            data?.message?.conversation ??
-            data?.message?.extendedTextMessage?.text ??
+            msg.conversation ??
+            msg.extendedTextMessage?.text ??
+            msg.imageMessage?.caption ??
+            msg.videoMessage?.caption ??
+            msg.documentMessage?.caption ??
+            msg.documentWithCaptionMessage?.message?.documentMessage?.caption ??
             '';
 
-        if (!messageText.trim()) {
-            const tipos = Object.keys(data?.message ?? {}).join(', ') || 'nenhum';
-            log.webhook('info', `Mídia ignorada (sem texto)`, { jid: remoteJid, tipos });
+        // Detect media type
+        type MediaType = 'image' | 'audio' | 'video' | 'document' | 'sticker' | 'location' | 'contact';
+        let mediaType: MediaType | null = null;
+        let mediaMeta: Record<string, unknown> = {};
+
+        if (msg.imageMessage) {
+            mediaType = 'image';
+            mediaMeta = { mimeType: msg.imageMessage.mimetype ?? 'image/jpeg', caption: msg.imageMessage.caption ?? '' };
+        } else if (msg.audioMessage || msg.pttMessage) {
+            mediaType = 'audio';
+            const am = msg.audioMessage ?? msg.pttMessage;
+            mediaMeta = { mimeType: am?.mimetype ?? 'audio/ogg', duration: am?.seconds ?? 0, ptt: !!msg.pttMessage };
+        } else if (msg.videoMessage) {
+            mediaType = 'video';
+            mediaMeta = { mimeType: msg.videoMessage.mimetype ?? 'video/mp4', duration: msg.videoMessage.seconds ?? 0, caption: msg.videoMessage.caption ?? '' };
+        } else if (msg.documentMessage || msg.documentWithCaptionMessage) {
+            mediaType = 'document';
+            const dm = msg.documentMessage ?? msg.documentWithCaptionMessage?.message?.documentMessage;
+            mediaMeta = { mimeType: dm?.mimetype ?? 'application/octet-stream', filename: dm?.fileName ?? 'arquivo', caption: dm?.caption ?? '' };
+        } else if (msg.stickerMessage) {
+            mediaType = 'sticker';
+            mediaMeta = { mimeType: msg.stickerMessage.mimetype ?? 'image/webp', animated: !!msg.stickerMessage.isAnimated };
+        } else if (msg.locationMessage) {
+            mediaType = 'location';
+            mediaMeta = {
+                lat: msg.locationMessage.degreesLatitude ?? null,
+                lon: msg.locationMessage.degreesLongitude ?? null,
+                address: msg.locationMessage.address ?? msg.locationMessage.name ?? null,
+            };
+        } else if (msg.contactMessage || msg.contactsArrayMessage) {
+            mediaType = 'contact';
+            const cm = msg.contactMessage ?? msg.contactsArrayMessage?.contacts?.[0];
+            mediaMeta = {
+                displayName: cm?.displayName ?? null,
+                vcard: cm?.vcard ?? null,
+            };
+        }
+
+        const hasMedia = mediaType !== null;
+
+        if (!messageText.trim() && !hasMedia) {
+            const tipos = Object.keys(msg).join(', ') || 'nenhum';
+            log.webhook('info', `Mensagem sem texto nem mídia ignorada`, { jid: remoteJid, tipos });
             return;
         }
 
@@ -134,8 +180,24 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
             }
         }
         await prisma.user.update({ where: { id: user.id }, data: { lastInteraction: new Date(), interactionCount: { increment: 1 } } });
-        const role = data?.key?.fromMe ? 'operator' : 'user';
-        await prisma.chatHistory.create({ data: { userId: user.id, role, content: messageText } });
+        const role = (data as any)?.key?.fromMe ? 'operator' : 'user';
+
+        // Build media record — store message key so backend can fetch base64 on demand
+        const mediaRecord = hasMedia ? {
+            type: mediaType,
+            messageKey: (data as any)?.key ?? {},
+            messageData: data,   // full Evolution payload for re-fetch
+            ...mediaMeta,
+        } : undefined;
+
+        await prisma.chatHistory.create({
+            data: {
+                userId: user.id,
+                role,
+                content: messageText,
+                ...(mediaRecord ? { media: mediaRecord as any } : {}),
+            },
+        });
 
         log.webhook('info', 'Mensagem salva', {
             tenant: tenant.slug,

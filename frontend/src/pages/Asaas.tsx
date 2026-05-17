@@ -64,17 +64,17 @@ const labelStyle: React.CSSProperties = {
 // ─── Status chips ─────────────────────────────────────────────────────────────
 
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string; border: string }> = {
-    PENDING:                    { label: 'Pendente',         bg: '#fef3c7',            color: '#92400e',           border: '#fde68a' },
-    CONFIRMED:                  { label: 'Confirmado',       bg: 'var(--accent-soft)', color: 'var(--accent-ink)', border: '#c9d8d0' },
-    RECEIVED:                   { label: 'Recebido',         bg: '#d1fae5',            color: '#065f46',           border: '#6ee7b7' },
-    RECEIVED_IN_CASH:           { label: 'Recebido (caixa)', bg: '#d1fae5',            color: '#065f46',           border: '#6ee7b7' },
-    OVERDUE:                    { label: 'Vencido',          bg: 'var(--danger-soft)', color: 'var(--danger)',     border: '#f0d2d2' },
-    REFUNDED:                   { label: 'Estornado',        bg: 'var(--paper-2)',     color: 'var(--ink-3)',      border: 'var(--line)' },
-    REFUND_REQUESTED:           { label: 'Estorno pend.',    bg: '#fef3c7',            color: '#92400e',           border: '#fde68a' },
-    DELETED:                    { label: 'Excluído',         bg: 'var(--paper-2)',     color: 'var(--ink-4)',      border: 'var(--line)' },
-    CANCELLED:                  { label: 'Cancelado',        bg: 'var(--paper-2)',     color: 'var(--ink-4)',      border: 'var(--line)' },
-    CHARGEBACK_REQUESTED:       { label: 'Chargeback',       bg: 'var(--danger-soft)', color: 'var(--danger)',     border: '#f0d2d2' },
-    AWAITING_RISK_ANALYSIS:     { label: 'Análise de risco', bg: '#fef3c7',            color: '#92400e',           border: '#fde68a' },
+    PENDING:                    { label: 'Pendente',         bg: 'var(--amber-soft)',  color: 'var(--amber)',      border: 'var(--amber)'  },
+    CONFIRMED:                  { label: 'Confirmado',       bg: 'var(--accent-soft)', color: 'var(--accent-ink)', border: 'var(--accent)' },
+    RECEIVED:                   { label: 'Recebido',         bg: 'var(--accent-soft)', color: 'var(--accent-ink)', border: 'var(--accent)' },
+    RECEIVED_IN_CASH:           { label: 'Recebido (caixa)', bg: 'var(--accent-soft)', color: 'var(--accent-ink)', border: 'var(--accent)' },
+    OVERDUE:                    { label: 'Vencido',          bg: 'var(--danger-soft)', color: 'var(--danger)',     border: 'var(--danger)' },
+    REFUNDED:                   { label: 'Estornado',        bg: 'var(--paper-2)',     color: 'var(--ink-3)',      border: 'var(--line)'   },
+    REFUND_REQUESTED:           { label: 'Estorno pend.',    bg: 'var(--amber-soft)',  color: 'var(--amber)',      border: 'var(--amber)'  },
+    DELETED:                    { label: 'Excluído',         bg: 'var(--paper-2)',     color: 'var(--ink-4)',      border: 'var(--line)'   },
+    CANCELLED:                  { label: 'Cancelado',        bg: 'var(--paper-2)',     color: 'var(--ink-4)',      border: 'var(--line)'   },
+    CHARGEBACK_REQUESTED:       { label: 'Chargeback',       bg: 'var(--danger-soft)', color: 'var(--danger)',     border: 'var(--danger)' },
+    AWAITING_RISK_ANALYSIS:     { label: 'Análise de risco', bg: 'var(--amber-soft)',  color: 'var(--amber)',      border: 'var(--amber)'  },
 };
 
 function StatusChip({ status }: { status: string }) {
@@ -251,7 +251,7 @@ function NovaCobrancaModal({ onClose, customers }: {
                     <div style={{
                         padding: '10px 14px', borderRadius: 8, fontSize: 12.5,
                         background: 'var(--danger-soft)', color: 'var(--danger)',
-                        border: '1px solid #f0d2d2',
+                        border: '1px solid var(--danger)',
                     }}>{error}</div>
                 )}
 
@@ -328,7 +328,7 @@ function NovoClienteModal({ onClose }: { onClose: () => void }) {
                     <div style={{
                         padding: '10px 14px', borderRadius: 8, fontSize: 12.5,
                         background: 'var(--danger-soft)', color: 'var(--danger)',
-                        border: '1px solid #f0d2d2',
+                        border: '1px solid var(--danger)',
                     }}>{error}</div>
                 )}
 
@@ -389,8 +389,8 @@ function SandboxActions({ payment }: { payment: Payment }) {
 
     const sandboxBtn = (action: string): React.CSSProperties => ({
         padding: '3px 9px', borderRadius: 5, fontSize: 11, fontWeight: 500,
-        border: '1px solid #f59e0b', background: pending === action ? '#fef3c7' : '#fffbeb',
-        color: '#92400e', cursor: pending ? 'not-allowed' : 'pointer',
+        border: '1px solid var(--amber)', background: 'var(--amber-soft)',
+        color: 'var(--amber)', cursor: pending ? 'not-allowed' : 'pointer',
         fontFamily: 'inherit', whiteSpace: 'nowrap',
         opacity: pending && pending !== action ? .45 : 1,
         transition: 'opacity .12s',
@@ -399,12 +399,12 @@ function SandboxActions({ payment }: { payment: Payment }) {
     return (
         <div style={{
             marginTop: 7, padding: '6px 8px', borderRadius: 7,
-            background: '#fffbeb', border: '1px solid #fde68a',
+            background: 'var(--amber-soft)', border: '1px solid var(--amber)',
             display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
         }}>
             <span style={{
                 fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: 1,
-                textTransform: 'uppercase', color: '#b45309', flexShrink: 0,
+                textTransform: 'uppercase', color: 'var(--amber)', flexShrink: 0,
             }}>Sandbox</span>
 
             {canConfirm && (
@@ -425,7 +425,7 @@ function SandboxActions({ payment }: { payment: Payment }) {
 
             {error && (
                 <span style={{
-                    flex: '1 1 100%', fontSize: 10.5, color: '#b45309',
+                    flex: '1 1 100%', fontSize: 10.5, color: 'var(--amber)',
                     marginTop: 2, lineHeight: 1.4,
                 }}>
                     ⚠ {error}
@@ -568,7 +568,7 @@ function CobrancasPanel({ isSandbox }: { isSandbox: boolean }) {
                                                 <button
                                                     onClick={() => { if (confirm('Cancelar esta cobrança?')) cancelMutation.mutate(p.id); }}
                                                     disabled={cancelMutation.isPending}
-                                                    style={{ ...btnSecondary, fontSize: 11, color: 'var(--danger)', borderColor: '#f0d2d2' }}
+                                                    style={{ ...btnSecondary, fontSize: 11, color: 'var(--danger)', borderColor: 'var(--danger)' }}
                                                 >
                                                     Cancelar
                                                 </button>
@@ -747,9 +747,9 @@ export function Asaas() {
                                 display: 'inline-flex', alignItems: 'center', gap: 6,
                                 fontFamily: "'Geist Mono', monospace", fontSize: 10, letterSpacing: .8,
                                 textTransform: 'uppercase', padding: '5px 12px', borderRadius: 20,
-                                background: isSandbox ? '#fef3c7' : 'var(--accent-soft)',
-                                color: isSandbox ? '#92400e' : 'var(--accent-ink)',
-                                border: `1px solid ${isSandbox ? '#fde68a' : '#c9d8d0'}`,
+                                background: isSandbox ? 'var(--amber-soft)' : 'var(--accent-soft)',
+                                color: isSandbox ? 'var(--amber)' : 'var(--accent-ink)',
+                                border: `1px solid ${isSandbox ? 'var(--amber)' : 'var(--accent)'}`,
                             }}>
                                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
                                 {isSandbox ? 'Sandbox' : 'Produção'}
@@ -758,7 +758,7 @@ export function Asaas() {
                             <span style={{
                                 fontFamily: "'Geist Mono', monospace", fontSize: 10.5, letterSpacing: .5,
                                 color: 'var(--danger)', background: 'var(--danger-soft)',
-                                border: '1px solid #f0d2d2', padding: '5px 12px', borderRadius: 20,
+                                border: '1px solid var(--danger)', padding: '5px 12px', borderRadius: 20,
                             }}>
                                 Não configurado
                             </span>
