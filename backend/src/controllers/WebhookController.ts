@@ -9,6 +9,7 @@ import { resolveState } from '../flow/StateResolver';
 import { prisma } from '../utils/prisma';
 import { normalizeBrazilianPhone } from '../utils/phoneNormalizer';
 import { retrieveRelevantContext } from '../services/KnowledgeService';
+import { sseManager } from '../services/SSEManager';
 
 const metaWhatsapp = new WhatsAppService();
 
@@ -374,6 +375,7 @@ async function processMessages(from: string, messageBody: string, tenantId?: str
             }
         }
         await stateService.addToHistory(from, 'model', respostaIA, aiTrace);
+        if (tenantId) sseManager.emit(tenantId, 'conversation-updated', { leadId: session.id });
 
         // ── 11. Send the response via WhatsApp ────────────────────────────────
         if (respostaIA.trim()) {

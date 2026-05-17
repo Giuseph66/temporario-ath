@@ -5,7 +5,8 @@ import { verifyWebhook, handleWebhook } from './controllers/WebhookController';
 import { handleAsaasWebhook } from './controllers/AsaasWebhookController';
 import { handleRespondiWebhook } from './controllers/RespondiController';
 import { login, refresh, register } from './controllers/AuthController';
-import { requireAuth } from './middlewares/auth';
+import { requireAuth, requireAuthSSE, AuthRequest } from './middlewares/auth';
+import { sseManager } from './services/SSEManager';
 import { createInstance, getQRCode, getStatus, disconnectInstance, configureWebhook, getWebhookStatus, getOwnerPhone } from './controllers/InstanceController';
 import { evolutionWebhook } from './controllers/EvolutionWebhookController';
 import { listLeads, getLead, listConversations, updateLeadState, updateLead, deleteLead, sendMessage, sendMediaMessage, backfillNames, clearSession } from './controllers/LeadsController';
@@ -130,6 +131,20 @@ app.get('/', (req, res) => res.send('🤖 Artemis PRO (Architecture Cleaned) Onl
 app.post('/auth/register', register);
 app.post('/auth/login', login);
 app.post('/auth/refresh', refresh);
+
+// SSE — real-time push para o frontend (substitui polling de conversas)
+app.get('/api/events', requireAuthSSE, (req, res) => {
+    const { tenantId } = req as AuthRequest;
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    sseManager.addClient(tenantId, res);
+    res.write('event: connected\ndata: {}\n\n');
+
+    req.on('close', () => sseManager.removeClient(tenantId, res));
+});
 
 // Leads e conversas
 app.get('/api/leads',                requireAuth as any, listLeads as any);

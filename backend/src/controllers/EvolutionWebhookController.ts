@@ -5,6 +5,7 @@ import { log } from '../services/LogService';
 import { handleAdminMessageWithTrace } from '../services/AdminChatService';
 import { EvolutionService } from '../services/EvolutionService';
 import { transcribeAudio } from '../services/TranscriptionService';
+import { sseManager } from '../services/SSEManager';
 
 function phoneVariants(phone: string): string[] {
     const digits = phone.replace(/\D/g, '');
@@ -212,6 +213,7 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
             },
         });
         const savedChatHistoryId = savedMsg.id;
+        sseManager.emit(tenant.id, 'conversation-updated', { leadId: user.id });
 
         log.webhook('info', 'Mensagem salva', {
             tenant: tenant.slug,

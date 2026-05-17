@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import { useSSE } from '../hooks/useSSE';
 import { MediaBubble, type MediaMeta } from '../components/MediaBubble';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -502,18 +503,19 @@ export function Conversas() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
+    useSSE(selectedId);
+
     const { data: list = [], isLoading: listLoading } = useQuery<ConversaItem[]>({
         queryKey: ['conversations'],
         queryFn: () => axios.get('/api/conversations').then(r => r.data),
-        refetchInterval: 3000,
+        staleTime: 30_000,
     });
 
     const { data: detail } = useQuery<LeadDetail>({
         queryKey: ['lead-detail', selectedId],
         queryFn: () => axios.get(`/api/leads/${selectedId}`).then(r => r.data),
         enabled: !!selectedId,
-        refetchInterval: 2000,
-        staleTime: 0,
+        staleTime: 30_000,
     });
 
     const sendMsg = useMutation({
