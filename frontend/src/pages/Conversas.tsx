@@ -13,6 +13,7 @@ type ConversaItem = {
     lastInteraction: string;
     enrollmentStatus: string;
     isGroup: boolean;
+    profilePicUrl: string | null;
     messages: { content: string; role: string; createdAt: string }[];
 };
 
@@ -33,6 +34,7 @@ type LeadDetail = {
     lgpdConsent: boolean;
     asaasCustomerId?: string | null;
     lastPaymentUrl?: string | null;
+    profilePicUrl: string | null;
     messages: { id: string; role: string; content: string; createdAt: string; trace?: { toolsUsed: string[]; state: string; modelId: string; programsInjected?: { key: string; name: string; price: number }[]; ragUsed?: { chars: number; snippet: string } | null; audioTranscription?: string } | null; media?: MediaMeta | null }[];
 };
 
@@ -137,7 +139,21 @@ function initials(name: string | null, phone: string): string {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Avatar({ name, phone, size = 38, active = false }: { name: string | null; phone: string; size?: number; active?: boolean }) {
+function Avatar({ name, phone, url, size = 38, active = false }: { name: string | null; phone: string; url?: string | null; size?: number; active?: boolean }) {
+    const [imgErr, setImgErr] = useState(false);
+    if (url && !imgErr) {
+        return (
+            <img
+                src={url} alt={name ?? phone}
+                onError={() => setImgErr(true)}
+                style={{
+                    width: size, height: size, borderRadius: '50%',
+                    objectFit: 'cover', flexShrink: 0,
+                    border: active ? '2px solid var(--accent)' : '1px solid var(--line)',
+                }}
+            />
+        );
+    }
     return (
         <div style={{
             width: size, height: size, borderRadius: '50%', flexShrink: 0,
@@ -723,7 +739,7 @@ export function Conversas() {
                             onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--paper-2)'; }}
                             onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
                             >
-                                <Avatar name={c.name} phone={c.phoneNumber} active={isSelected} />
+                                <Avatar name={c.name} phone={c.phoneNumber} url={c.profilePicUrl} active={isSelected} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
                                         <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -766,7 +782,7 @@ export function Conversas() {
                     <>
                         {/* Chat header */}
                         <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 14, background: 'var(--paper)', flexShrink: 0 }}>
-                            <Avatar name={detail.name} phone={detail.phoneNumber} size={42} active />
+                            <Avatar name={detail.name} phone={detail.phoneNumber} url={detail.profilePicUrl} size={42} active />
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <EditableName
                                     name={detail.name}
@@ -1030,7 +1046,7 @@ export function Conversas() {
                     {/* Profile header */}
                     <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--line)', background: 'var(--paper)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                            <Avatar name={detail.name} phone={detail.phoneNumber} size={48} active />
+                            <Avatar name={detail.name} phone={detail.phoneNumber} url={detail.profilePicUrl} size={48} active />
                             <div>
                                 <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: 'var(--ink-1)', lineHeight: 1.2, marginBottom: 2 }}>
                                     {detail.name ?? 'Sem nome'}

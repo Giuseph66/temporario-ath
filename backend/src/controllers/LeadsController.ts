@@ -63,7 +63,14 @@ export async function getLead(req: AuthRequest, res: Response): Promise<Response
         },
     });
     if (!lead) return res.status(404).json({ error: 'Lead não encontrado' });
-    return res.json(lead);
+
+    // Fetch profilePicUrl from Contact cache
+    const contact = await prisma.contact.findFirst({
+        where: { tenantId: req.tenantId, phone: { in: phoneVariants(lead.phoneNumber) } },
+        select: { profilePicUrl: true },
+    }).catch(() => null);
+
+    return res.json({ ...lead, profilePicUrl: contact?.profilePicUrl ?? null });
 }
 
 export async function listConversations(req: AuthRequest, res: Response): Promise<Response> {
@@ -77,7 +84,22 @@ export async function listConversations(req: AuthRequest, res: Response): Promis
             messages: { orderBy: { createdAt: 'desc' }, take: 1 },
         },
     });
-    return res.json(leads);
+
+    // Batch-fetch profilePicUrls from Contact cache (one query for all phones)
+    const phones = leads.flatMap(l => phoneVariants(l.phoneNumber));
+    const contacts = await prisma.contact.findMany({
+        where: { tenantId: req.tenantId, phone: { in: phones } },
+        select: { phone: true, profilePicUrl: true },
+    }).catch(() => [] as { phone: string; profilePicUrl: string | null }[]);
+
+    const picByPhone = new Map(contacts.map(c => [c.phone, c.profilePicUrl]));
+
+    const result = leads.map(l => ({
+        ...l,
+        profilePicUrl: phoneVariants(l.phoneNumber).map(v => picByPhone.get(v)).find(Boolean) ?? null,
+    }));
+
+    return res.json(result);
 }
 
 export async function updateLeadState(req: AuthRequest, res: Response): Promise<Response> {

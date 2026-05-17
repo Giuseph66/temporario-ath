@@ -1,8 +1,3 @@
-{"ts":"2026-05-17T07:10:17.510Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:10:17.515Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:10:17.813Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.update","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:10:17.817Z","level":"info","category":"webhook","msg":"Evento ignorado: messages.update","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:10:17.821Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.update","instance":"artemis-confluence"}}
 {"ts":"2026-05-17T07:10:17.828Z","level":"info","category":"webhook","msg":"Evento ignorado: messages.update","data":{"instance":"artemis-confluence"}}
 {"ts":"2026-05-17T07:10:17.834Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.update","instance":"artemis-confluence"}}
 {"ts":"2026-05-17T07:10:17.838Z","level":"info","category":"webhook","msg":"Evento ignorado: messages.update","data":{"instance":"artemis-confluence"}}
@@ -1998,3 +1993,8 @@
 {"ts":"2026-05-17T22:22:34.626Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
 {"ts":"2026-05-17T22:22:34.639Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5593****","role":"user","chars":38}}
 {"ts":"2026-05-17T22:22:34.643Z","level":"info","category":"webhook","msg":"Whitelist: contato bloqueado (mensagem salva, bot não responde)","data":{"phone":"5593****","variants":"5593984154186,+5593984154186,559384154186,+559384154186","allowed":"+556699086599"}}
+{"ts":"2026-05-17T22:26:15.055Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T22:26:15.060Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"senderKeyDistributionMessage, ephemeralMessage"}}
+{"ts":"2026-05-17T22:26:28.392Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T22:26:28.408Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5593****","role":"user","chars":30}}
+{"ts":"2026-05-17T22:26:28.412Z","level":"info","category":"webhook","msg":"Whitelist: contato bloqueado (mensagem salva, bot não responde)","data":{"phone":"5593****","variants":"5593984154186,+5593984154186,559384154186,+559384154186","allowed":"+556699086599"}}
