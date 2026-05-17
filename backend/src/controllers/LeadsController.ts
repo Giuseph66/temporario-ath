@@ -175,6 +175,87 @@ export async function backfillNames(req: AuthRequest, res: Response): Promise<Re
     return res.json({ ok: true, checked: leads.length, updated });
 }
 
+export async function sendMediaMessage(req: AuthRequest, res: Response): Promise<Response> {
+    try {
+        const { base64, mediatype, mimetype, caption, fileName } = req.body as {
+            base64: string;
+            mediatype: 'image' | 'audio' | 'video' | 'document';
+            mimetype: string;
+            caption?: string;
+            fileName?: string;
+        };
+
+        // Derive a filename from mimetype when not provided — required by Evolution for doc/video
+        function resolveFileName(): string | undefined {
+            if (fileName) return fileName;
+            const ext: Record<string, string> = {
+                'image/jpeg': 'image.jpg', 'image/png': 'image.png', 'image/gif': 'image.gif', 'image/webp': 'image.webp',
+                'video/mp4': 'video.mp4', 'video/quicktime': 'video.mov', 'video/webm': 'video.webm',
+                'audio/webm': 'audio.webm', 'audio/ogg': 'audio.ogg', 'audio/mpeg': 'audio.mp3', 'audio/mp4': 'audio.mp4',
+                'application/pdf': 'document.pdf',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'document.docx',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'document.xlsx',
+                'application/zip': 'archive.zip',
+            };
+            // Try exact match, then prefix match
+            return ext[mimetype] ?? `file.${mimetype.split('/')[1]?.split(';')[0] ?? 'bin'}`;
+        }
+
+        if (!base64 || !mediatype || !mimetype) {
+            return res.status(400).json({ error: 'base64, mediatype e mimetype obrigatórios' });
+        }
+
+        const lead = await prisma.user.findFirst({ where: { id: req.params.id, tenantId: req.tenantId } });
+        if (!lead) return res.status(404).json({ error: 'Lead não encontrado' });
+
+        const phone = lead.phoneNumber.replace('+', '');
+        if (phone.length > 15 || !/^\d+$/.test(phone)) {
+            return res.status(400).json({ error: `Número inválido: ${lead.phoneNumber}` });
+        }
+
+        const tenant = await prisma.tenant.findUnique({ where: { id: req.tenantId } });
+        if (!tenant?.evolutionInstance) return res.status(400).json({ error: 'Evolution não configurada' });
+
+        // PTT audio via dedicated endpoint — capture response for messageData
+        let evoResponse: any;
+        if (mediatype === 'audio') {
+            evoResponse = await EvolutionService.sendWhatsAppAudio(tenant.evolutionInstance, lead.phoneNumber, base64);
+        } else {
+            evoResponse = await EvolutionService.sendMedia(tenant.evolutionInstance, lead.phoneNumber, mediatype, base64, mimetype, caption, resolveFileName());
+        }
+
+        // Only store the message key — enough to re-fetch via getBase64FromMediaMessage.
+        // Never store the full evoResponse: Evolution echoes the sent base64 back,
+        // which would make every GET /api/leads/:id return MBs of base64 on the poll.
+        const msgKey = evoResponse?.key ?? null;
+
+        // messageData needs at least { key } for Evolution to locate the media
+        const messageData = msgKey ? { key: msgKey } : null;
+
+        const media = {
+            type: mediatype,
+            mimeType: mimetype,
+            caption: caption ?? '',
+            filename: resolveFileName(),
+            messageKey: msgKey,
+            messageData,
+        };
+        const msg = await prisma.chatHistory.create({
+            data: {
+                userId: lead.id,
+                role: 'operator',
+                content: caption ?? '',
+                media: media as any,
+            },
+        });
+
+        return res.json({ ok: true, message: msg });
+    } catch (err: any) {
+        const detail = err?.response?.data ?? err?.message ?? 'desconhecido';
+        return res.status(500).json({ error: `Erro ao enviar mídia: ${JSON.stringify(detail)}` });
+    }
+}
+
 export async function sendMessage(req: AuthRequest, res: Response): Promise<Response> {
     try {
         const { text } = req.body as { text: string };

@@ -69,8 +69,10 @@ ${recentMsgs.map(m =>
 - Se perguntarem sobre um lead específico, forneça os dados disponíveis
 - Para agendar reunião ou compromisso, use as ferramentas de calendário disponíveis
 - Para cancelar reunião ou compromisso no calendário, use as ferramentas de calendário disponíveis
+- Para mandar ou agendar mensagem de WhatsApp para contato/lead, use a ferramenta admin_schedule_whatsapp_message
 - Para criar ou consultar clientes/cobranças no Asaas, use as ferramentas Asaas disponíveis
 - Se faltar data, horário, título ou duração, pergunte antes de criar o evento
+- Se faltar contato, texto ou horário da mensagem de WhatsApp, pergunte antes de agendar
 - Se faltar nome ou CPF/CNPJ para cliente Asaas, pergunte antes de criar cliente
 - Se faltar customer ID, valor ou CPF/CNPJ do cliente para cobrança, pergunte antes de criar cobrança no Asaas
 - Se pedirem deletar ou atualizar dados do sistema fora das ferramentas disponíveis, avise que isso é feito pelo painel web
@@ -221,6 +223,20 @@ const updateAsaasPaymentDecl: FunctionDeclaration = {
     },
 };
 
+const scheduleWhatsappMessageDecl: FunctionDeclaration = {
+    name: 'admin_schedule_whatsapp_message',
+    description: 'Agenda uma mensagem de WhatsApp para um contato ou lead existente. Use quando o operador pedir para mandar mensagem para alguém agora ou no futuro, incluindo "daqui 10 min", "às 17h" ou "amanhã". Nunca invente contato: procure por nome/apelido/telefone e peça confirmação se houver ambiguidade.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            contactQuery: { type: SchemaType.STRING, description: 'Nome, apelido ou telefone do contato. Ex: Maria, minha vida, 556699...' },
+            messageText: { type: SchemaType.STRING, description: 'Texto exato ou resumido da mensagem a enviar.' },
+            runAt: { type: SchemaType.STRING, description: 'Data/hora futura em ISO 8601 com fuso. Ex: 2026-05-17T14:10:00-04:00' },
+        },
+        required: ['contactQuery', 'messageText', 'runAt'],
+    },
+};
+
 type AdminTrace = {
     toolsUsed: string[];
     state: string;
@@ -260,6 +276,56 @@ function normalizeBillingType(value?: string): string | undefined {
     return normalized;
 }
 
+function normalizeText(value: string): string {
+    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function phoneDigits(value: string): string {
+    return String(value).replace(/\D/g, '');
+}
+
+function phoneVariants(value: string): string[] {
+    const digits = phoneDigits(value);
+    const variants = new Set<string>([digits, `+${digits}`]);
+    if (digits.startsWith('55') && digits.length === 13 && digits[4] === '9') {
+        variants.add(digits.slice(0, 4) + digits.slice(5));
+        variants.add(`+${digits.slice(0, 4) + digits.slice(5)}`);
+    }
+    if (digits.startsWith('55') && digits.length === 12) {
+        variants.add(digits.slice(0, 4) + '9' + digits.slice(4));
+        variants.add(`+${digits.slice(0, 4) + '9' + digits.slice(4)}`);
+    }
+    return [...variants].filter(Boolean);
+}
+
+function phoneIdentityKey(value: string): string {
+    const digits = phoneDigits(value);
+    if (digits.startsWith('55') && digits.length === 13 && digits[4] === '9') {
+        return digits.slice(0, 4) + digits.slice(5);
+    }
+    return digits;
+}
+
+function preferBrazilianMobile(a: string, b: string): string {
+    const aDigits = phoneDigits(a);
+    const bDigits = phoneDigits(b);
+    const aHasNinthDigit = aDigits.startsWith('55') && aDigits.length === 13 && aDigits[4] === '9';
+    const bHasNinthDigit = bDigits.startsWith('55') && bDigits.length === 13 && bDigits[4] === '9';
+    if (aHasNinthDigit && !bHasNinthDigit) return a;
+    if (bHasNinthDigit && !aHasNinthDigit) return b;
+    return bDigits.length > aDigits.length ? b : a;
+}
+
+function contactMatches(query: string, candidate: { name?: string | null; customName?: string | null; phone?: string | null; phoneNumber?: string | null }): boolean {
+    const q = normalizeText(query);
+    const qDigits = phoneDigits(query);
+    const names = [candidate.customName, candidate.name].filter(Boolean).map(v => normalizeText(String(v)));
+    const phone = phoneDigits(String(candidate.phone ?? candidate.phoneNumber ?? ''));
+
+    return names.some(name => name.includes(q) || q.includes(name))
+        || Boolean(qDigits && phone.includes(qDigits));
+}
+
 async function resolveAsaasPaymentId(svc: Awaited<ReturnType<typeof asaasServiceForTenant>>, args: any): Promise<string> {
     const rawPaymentId = String(args.paymentId ?? '').trim();
     if (rawPaymentId.startsWith('pay_')) return rawPaymentId;
@@ -282,7 +348,113 @@ async function resolveAsaasPaymentId(svc: Awaited<ReturnType<typeof asaasService
     return match.id;
 }
 
+async function resolveMessageTarget(tenantId: string, query: string): Promise<{ userId?: string; error?: string; options?: Array<{ name: string | null; phone: string }> }> {
+    const contacts = await prisma.contact.findMany({
+        where: { tenantId },
+        take: 200,
+        select: { phone: true, name: true, customName: true },
+        orderBy: { updatedAt: 'desc' },
+    });
+    const users = await prisma.user.findMany({
+        where: { tenantId, isGroup: false },
+        take: 200,
+        select: { id: true, phoneNumber: true, name: true },
+        orderBy: { lastInteraction: 'desc' },
+    });
+
+    const matches = [
+        ...contacts.filter(c => contactMatches(query, c)).map(c => ({
+            name: c.customName ?? c.name ?? null,
+            phone: c.phone,
+        })),
+        ...users.filter(u => contactMatches(query, u)).map(u => ({
+            name: u.name ?? null,
+            phone: u.phoneNumber,
+        })),
+    ];
+
+    const byPhoneIdentity = new Map<string, { name: string | null; phone: string }>();
+    for (const match of matches) {
+        const key = phoneIdentityKey(match.phone);
+        const existing = byPhoneIdentity.get(key);
+        byPhoneIdentity.set(key, existing
+            ? { name: existing.name ?? match.name, phone: preferBrazilianMobile(existing.phone, match.phone) }
+            : match
+        );
+    }
+
+    const unique = Array.from(byPhoneIdentity.values());
+    if (unique.length === 0) return { error: `Não encontrei contato ou lead para "${query}".` };
+    if (unique.length > 1) {
+        const options = unique.slice(0, 5);
+        return {
+            error: 'Encontrei mais de um contato possível. Peça confirmação pelo número correto.',
+            options,
+        };
+    }
+
+    const target = unique[0];
+    const variants = phoneVariants(target.phone);
+    const existing = await prisma.user.findFirst({ where: { tenantId, phoneNumber: { in: variants }, isGroup: false } });
+    if (existing) return { userId: existing.id };
+
+    const created = await prisma.user.create({
+        data: {
+            tenantId,
+            phoneNumber: phoneDigits(target.phone),
+            name: target.name,
+            conversationState: 'GREETING',
+            lgpdConsent: false,
+        },
+    });
+    return { userId: created.id };
+}
+
 async function executeAdminTool(tenantId: string, name: string, args: any) {
+    if (name === 'admin_schedule_whatsapp_message') {
+        const runAt = new Date(args.runAt);
+        if (Number.isNaN(runAt.getTime()) || runAt <= new Date()) {
+            return { error: 'Data/hora de envio inválida ou no passado.' };
+        }
+        if (!String(args.messageText ?? '').trim()) {
+            return { error: 'Texto da mensagem obrigatório.' };
+        }
+
+        const target = await resolveMessageTarget(tenantId, String(args.contactQuery ?? ''));
+        if (!target.userId) return target;
+
+        const automation = await prisma.automation.create({
+            data: {
+                tenantId,
+                name: `Mensagem agendada - ${args.contactQuery}`,
+                type: 'ONE_OFF',
+                status: 'ACTIVE',
+                triggerType: 'TIME',
+                scheduleJson: { runAt: runAt.toISOString() },
+                targetJson: { userId: target.userId },
+                conditionsJson: {
+                    requireLgpd: false,
+                    skipGroups: true,
+                    excludeEnrollmentStatuses: [],
+                },
+                actionJson: {
+                    messageTemplate: String(args.messageText).trim(),
+                    internalNote: `[AUTOMACAO INTERNA] Mensagem agendada pelo operador para "${args.contactQuery}".`,
+                },
+                limitsJson: { cooldownHours: 0 },
+                requiresApproval: false,
+                nextRunAt: runAt,
+            },
+        });
+
+        return {
+            ok: true,
+            automationId: automation.id,
+            runAt: runAt.toISOString(),
+            message: 'Mensagem agendada com sucesso.',
+        };
+    }
+
     if (name === 'admin_create_asaas_customer') {
         if (!args.cpfCnpj || String(args.cpfCnpj).replace(/\D/g, '').length < 11) {
             return { error: 'CPF ou CNPJ obrigatório para criar cliente Asaas.' };
@@ -484,7 +656,16 @@ export async function handleAdminMessageWithTrace(tenantId: string, message: str
 - Se houver apenas invoiceUrl/link no histórico, busque cobranças recentes com admin_list_asaas_payments e compare pelo invoiceUrl antes de atualizar
 - Se o usuário disser "vencimento dia 20" sem mês/ano, use o mês/ano da cobrança atual; se não houver cobrança no contexto, use mês/ano atuais
 - Para atualizar forma de pagamento para livre/cliente escolhe, chame admin_update_asaas_payment com billingType UNDEFINED
-- Para atualizar cobrança, use admin_update_asaas_payment; não mande para o painel web`.trim();
+- Para atualizar cobrança, use admin_update_asaas_payment; não mande para o painel web
+
+## WHATSAPP / MENSAGENS PARA CONTATOS
+- Se o operador pedir "manda mensagem para X", "manda um oi para X" ou "chama X daqui 10 min", use admin_schedule_whatsapp_message
+- Data/hora atual: ${now.toLocaleString('pt-BR', { timeZone: 'America/Cuiaba' })}
+- Para "daqui X minutos/horas", calcule runAt a partir da data/hora atual acima
+- Para "uns 10 min", trate como aproximadamente 10 minutos
+- Se o contato for ambíguo ou não encontrado, diga isso e peça o nome/telefone exato
+- Se a ferramenta retornar opções, mostre as opções com nome e telefone; você tem permissão para informar esses números ao operador
+- Não diga que não consegue enviar mensagem para contato quando a ferramenta estiver disponível`.trim();
         const tools: Tool[] = [{
             functionDeclarations: [
                 checkCalendarAvailabilityDecl,
@@ -496,6 +677,7 @@ export async function handleAdminMessageWithTrace(tenantId: string, message: str
                 createAsaasPaymentDecl,
                 listAsaasPaymentsDecl,
                 updateAsaasPaymentDecl,
+                scheduleWhatsappMessageDecl,
             ],
         }];
 

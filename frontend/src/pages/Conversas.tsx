@@ -427,6 +427,14 @@ export function Conversas() {
     const [tab, setTab] = useState<'contacts' | 'groups'>('contacts');
     const [msgText, setMsgText] = useState('');
     const [traceModal, setTraceModal] = useState<TraceData | null>(null);
+    const [mediaPreview, setMediaPreview] = useState<{ base64: string; mediatype: 'image' | 'audio' | 'video' | 'document'; mimetype: string; name: string; previewUrl: string } | null>(null);
+    const [mediaSendError, setMediaSendError] = useState<string | null>(null);
+    const [recording, setRecording] = useState(false);
+    const [recSeconds, setRecSeconds] = useState(0);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef   = useRef<Blob[]>([]);
+    const recTimerRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
     const { data: list = [], isLoading: listLoading } = useQuery<ConversaItem[]>({
@@ -451,6 +459,107 @@ export function Conversas() {
             qc.invalidateQueries({ queryKey: ['conversations'] });
         },
     });
+
+    const sendMedia = useMutation({
+        mutationFn: (payload: { base64: string; mediatype: string; mimetype: string; caption?: string; fileName?: string }) =>
+            axios.post(`/api/leads/${selectedId}/send-media`, payload),
+        onSuccess: () => {
+            setMediaPreview(null);
+            setMediaSendError(null);
+            setMsgText('');
+            qc.invalidateQueries({ queryKey: ['lead-detail', selectedId] });
+            qc.invalidateQueries({ queryKey: ['conversations'] });
+        },
+        onError: (err: any) => {
+            // Clear preview so user doesn't accidentally resend
+            setMediaPreview(null);
+            const isTimeout = err?.message?.includes('timeout') ||
+                err?.response?.data?.error?.includes('timeout');
+            setMediaSendError(
+                isTimeout
+                    ? 'A mídia pode ter sido enviada mas demorou demais para confirmar. Verifique o WhatsApp do contato antes de reenviar.'
+                    : `Falha ao enviar mídia: ${err?.response?.data?.error ?? err?.message ?? 'erro desconhecido'}`
+            );
+            // Auto-dismiss after 12s
+            setTimeout(() => setMediaSendError(null), 12_000);
+        },
+    });
+
+    function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        // 75MB original → ~100MB base64 → hits server limit
+        if (file.size > 75 * 1024 * 1024) {
+            alert(`Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(0)}MB). Limite: 75MB.`);
+            e.target.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = reader.result as string;
+            // Strip "data:mime;base64," prefix → raw base64
+            const base64 = dataUrl.split(',')[1];
+            const mime = file.type;
+            let mediatype: 'image' | 'audio' | 'video' | 'document' = 'document';
+            if (mime.startsWith('image/'))  mediatype = 'image';
+            else if (mime.startsWith('audio/')) mediatype = 'audio';
+            else if (mime.startsWith('video/')) mediatype = 'video';
+            setMediaPreview({ base64, mediatype, mimetype: mime, name: file.name, previewUrl: dataUrl });
+        };
+        reader.readAsDataURL(file);
+        // Reset so same file can be selected again
+        e.target.value = '';
+    }
+
+    function fmtRecTime(s: number) {
+        return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    }
+
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioChunksRef.current = [];
+
+            // Pick best supported mime
+            const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
+                .find(m => MediaRecorder.isTypeSupported(m)) ?? '';
+
+            const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+            mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+            mr.onstop = () => {
+                stream.getTracks().forEach(t => t.stop());
+                const blob = new Blob(audioChunksRef.current, { type: mr.mimeType });
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64 = (reader.result as string).split(',')[1];
+                    sendMedia.mutate({ base64, mediatype: 'audio', mimetype: blob.type });
+                };
+                reader.readAsDataURL(blob);
+            };
+
+            mr.start(200); // collect chunks every 200ms
+            mediaRecorderRef.current = mr;
+            setRecording(true);
+            setRecSeconds(0);
+            recTimerRef.current = setInterval(() => setRecSeconds(s => s + 1), 1000);
+        } catch {
+            alert('Permissão de microfone negada ou não disponível.');
+        }
+    }
+
+    function stopRecording(send: boolean) {
+        if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null; }
+        const mr = mediaRecorderRef.current;
+        if (!mr) return;
+        if (!send) {
+            // Discard — detach onstop before stopping
+            mr.onstop = () => mr.stream?.getTracks().forEach(t => t.stop());
+        }
+        mr.stop();
+        mediaRecorderRef.current = null;
+        setRecording(false);
+        setRecSeconds(0);
+    }
 
     async function patchLead(fields: Record<string, unknown>) {
         await axios.patch(`/api/leads/${selectedId}`, fields);
@@ -710,22 +819,138 @@ export function Conversas() {
                         </div>
 
                         {/* Send input */}
-                        <div style={{ flexShrink: 0, padding: '12px 16px', borderTop: '1px solid var(--line)', background: 'var(--paper)', display: 'flex', gap: 8 }}>
-                            <input
-                                value={msgText}
-                                onChange={e => setMsgText(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && msgText.trim() && sendMsg.mutate(msgText)}
-                                placeholder="Enviar mensagem como operador…"
-                                disabled={sendMsg.isPending}
-                                style={{ flex: 1, padding: '9px 14px', borderRadius: 20, fontSize: 13, border: '1px solid var(--line-2)', background: 'var(--paper-2)', color: 'var(--ink-1)', fontFamily: 'inherit', outline: 'none' }}
-                            />
-                            <button
-                                onClick={() => msgText.trim() && sendMsg.mutate(msgText)}
-                                disabled={!msgText.trim() || sendMsg.isPending}
-                                style={{ padding: '9px 18px', borderRadius: 20, fontSize: 13, fontWeight: 500, border: 'none', background: msgText.trim() ? '#6366f1' : 'var(--line-2)', color: msgText.trim() ? '#fff' : 'var(--ink-5)', cursor: msgText.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'background .15s' }}
-                            >
-                                {sendMsg.isPending ? '…' : 'Enviar'}
-                            </button>
+                        <div style={{ flexShrink: 0, borderTop: '1px solid var(--line)', background: 'var(--paper)' }}>
+                            {/* Media send error banner */}
+                            {mediaSendError && (
+                                <div style={{ padding: '8px 16px', background: 'var(--amber-soft)', borderBottom: '1px solid var(--amber)', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                                    <span style={{ fontSize: 15, flexShrink: 0 }}>⚠</span>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--amber)', marginBottom: 1 }}>Atenção</div>
+                                        <div style={{ fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.4 }}>{mediaSendError}</div>
+                                    </div>
+                                    <button onClick={() => setMediaSendError(null)}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-4)', fontSize: 14, flexShrink: 0, paddingTop: 2 }}>✕</button>
+                                </div>
+                            )}
+
+                            {/* Media preview bar */}
+                            {mediaPreview && (
+                                <div style={{ padding: '10px 16px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    {mediaPreview.mediatype === 'image' ? (
+                                        <img src={mediaPreview.previewUrl} alt="preview"
+                                            style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />
+                                    ) : (
+                                        <div style={{ width: 48, height: 48, borderRadius: 8, background: 'var(--paper-3)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+                                            {mediaPreview.mediatype === 'audio' ? '🎤' : mediaPreview.mediatype === 'video' ? '▶' : '📄'}
+                                        </div>
+                                    )}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {mediaPreview.name}
+                                        </div>
+                                        <div style={{ fontSize: 10, color: 'var(--ink-4)', fontFamily: "'Geist Mono', monospace", textTransform: 'uppercase', marginTop: 2 }}>
+                                            {mediaPreview.mediatype}
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setMediaPreview(null)}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--ink-4)', padding: '4px 6px' }}>
+                                        ✕
+                                    </button>
+                                </div>
+                            )}
+
+                            <div style={{ padding: '10px 16px 12px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                                {/* Hidden file input */}
+                                <input ref={fileInputRef} type="file"
+                                    accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip"
+                                    onChange={handleFileSelect} style={{ display: 'none' }} />
+
+                                {recording ? (
+                                    /* ── Recording mode ── */
+                                    <>
+                                        {/* Pulsing dot + timer */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, padding: '0 6px' }}>
+                                            <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--danger)', flexShrink: 0, animation: 'rec-pulse 1s ease-in-out infinite' }} />
+                                            <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 14, color: 'var(--ink-1)', fontWeight: 600 }}>
+                                                {fmtRecTime(recSeconds)}
+                                            </span>
+                                            <span style={{ fontSize: 12, color: 'var(--ink-4)' }}>Gravando…</span>
+                                        </div>
+                                        {/* Discard */}
+                                        <button onClick={() => stopRecording(false)} title="Cancelar gravação"
+                                            style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--line-2)', background: 'var(--paper-2)', color: 'var(--ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                                            </svg>
+                                        </button>
+                                        {/* Send */}
+                                        <button onClick={() => stopRecording(true)} title="Enviar áudio"
+                                            style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <polyline points="20 6 9 17 4 12"/>
+                                            </svg>
+                                        </button>
+                                    </>
+                                ) : (
+                                    /* ── Normal mode ── */
+                                    <>
+                                        {/* Attach */}
+                                        <button onClick={() => fileInputRef.current?.click()}
+                                            disabled={sendMsg.isPending || sendMedia.isPending}
+                                            title="Anexar arquivo"
+                                            style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--line-2)', background: 'var(--paper-2)', color: 'var(--ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                                            </svg>
+                                        </button>
+
+                                        <input
+                                            value={msgText}
+                                            onChange={e => setMsgText(e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key !== 'Enter' || e.shiftKey) return;
+                                                if (mediaPreview) {
+                                                    sendMedia.mutate({ base64: mediaPreview.base64, mediatype: mediaPreview.mediatype, mimetype: mediaPreview.mimetype, caption: msgText.trim() || undefined, fileName: mediaPreview.name });
+                                                } else if (msgText.trim()) {
+                                                    sendMsg.mutate(msgText);
+                                                }
+                                            }}
+                                            placeholder={mediaPreview ? 'Legenda (opcional)…' : 'Enviar mensagem como operador…'}
+                                            disabled={sendMsg.isPending || sendMedia.isPending}
+                                            style={{ flex: 1, padding: '9px 14px', borderRadius: 20, fontSize: 13, border: '1px solid var(--line-2)', background: 'var(--paper-2)', color: 'var(--ink-1)', fontFamily: 'inherit', outline: 'none' }}
+                                        />
+
+                                        {/* Mic — shows when input empty and no media preview */}
+                                        {!msgText.trim() && !mediaPreview ? (
+                                            <button onClick={startRecording}
+                                                disabled={sendMsg.isPending || sendMedia.isPending}
+                                                title="Gravar áudio"
+                                                style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--line-2)', background: 'var(--paper-2)', color: 'var(--ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>
+                                                </svg>
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => {
+                                                    if (mediaPreview) {
+                                                        sendMedia.mutate({ base64: mediaPreview.base64, mediatype: mediaPreview.mediatype, mimetype: mediaPreview.mimetype, caption: msgText.trim() || undefined, fileName: mediaPreview.name });
+                                                    } else if (msgText.trim()) {
+                                                        sendMsg.mutate(msgText);
+                                                    }
+                                                }}
+                                                disabled={(!msgText.trim() && !mediaPreview) || sendMsg.isPending || sendMedia.isPending}
+                                                style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: 'var(--purple)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'opacity .15s' }}>
+                                                {sendMsg.isPending || sendMedia.isPending
+                                                    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                                                    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                                }
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                            <style>{`@keyframes rec-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(0.8)} }`}</style>
                         </div>
                     </>
                 )}

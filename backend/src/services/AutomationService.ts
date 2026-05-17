@@ -85,6 +85,12 @@ function eventKeyFromPayload(triggerPayload: JsonMap): string | null {
     return `${triggerPayload.eventName ?? 'event'}:${stableId ?? JSON.stringify(payload)}`;
 }
 
+function shouldCancelIfLeadInteracted(automation: Automation): boolean {
+    const action = asObject(automation.actionJson);
+    if (action.cancelIfLeadInteracted === true) return true;
+    return String(action.internalNote ?? '').includes('Follow-up criado pelo agente');
+}
+
 async function sendWhatsapp(tenantId: string, phone: string, text: string): Promise<void> {
     const tenant = await prisma.tenant.findUnique({
         where: { id: tenantId },
@@ -328,6 +334,18 @@ export class AutomationService {
 
         if (!isInsideWindow(conditions.sendWindow)) {
             return { ok: false, reason: 'Fora da janela de envio' };
+        }
+
+        if (shouldCancelIfLeadInteracted(automation)) {
+            const interaction = await prisma.chatHistory.findFirst({
+                where: {
+                    userId: lead.id,
+                    role: { in: ['user', 'operator'] },
+                    createdAt: { gt: automation.createdAt },
+                },
+                select: { id: true },
+            });
+            if (interaction) return { ok: false, reason: 'Follow-up obsoleto: houve conversa depois da criação' };
         }
 
         const cooldownHours = Number(limits.cooldownHours ?? 72);

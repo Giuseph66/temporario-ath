@@ -1,161 +1,3 @@
-{"ts":"2026-05-15T18:24:34.966Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"554299614855-1574987193@g.us","tipos":"imageMessage, messageContextInfo, base64"}}
-{"ts":"2026-05-15T18:24:58.535Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:24:58.558Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"user","chars":65}}
-{"ts":"2026-05-15T18:24:58.563Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"167658"}}
-{"ts":"2026-05-15T18:25:03.786Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:25:03.794Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363235822943755@g.us","tipos":"reactionMessage"}}
-{"ts":"2026-05-15T18:25:09.598Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:25:09.637Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"1203****","role":"user","chars":43}}
-{"ts":"2026-05-15T18:25:09.647Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"943755"}}
-{"ts":"2026-05-15T18:25:15.238Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:25:15.241Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:25:15.295Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5593****","role":"operator","chars":2}}
-{"ts":"2026-05-15T18:25:25.093Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:25:25.096Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
-{"ts":"2026-05-15T18:25:38.280Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:25:38.340Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"1203****","role":"user","chars":85}}
-{"ts":"2026-05-15T18:25:38.346Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"852605"}}
-{"ts":"2026-05-15T18:26:00.473Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:26:00.481Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
-{"ts":"2026-05-15T18:26:07.635Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:26:07.640Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
-{"ts":"2026-05-15T18:26:11.591Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:26:11.614Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"1203****","role":"user","chars":398}}
-{"ts":"2026-05-15T18:26:11.621Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"943755"}}
-{"ts":"2026-05-15T18:26:27.114Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:26:27.133Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"1203****","role":"user","chars":154}}
-{"ts":"2026-05-15T18:26:27.142Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"852605"}}
-{"ts":"2026-05-15T18:27:03.765Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:27:03.773Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"554299614855-1574987193@g.us","tipos":"imageMessage, messageContextInfo, base64"}}
-{"ts":"2026-05-15T18:27:21.722Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:27:21.728Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363235822943755@g.us","tipos":"messageContextInfo, secretEncryptedMessage"}}
-{"ts":"2026-05-15T18:28:15.950Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:28:15.976Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"user","chars":189}}
-{"ts":"2026-05-15T18:28:15.982Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"167658"}}
-{"ts":"2026-05-15T18:28:53.039Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:28:53.048Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
-{"ts":"2026-05-15T18:29:00.793Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:29:00.800Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"reactionMessage"}}
-{"ts":"2026-05-15T18:29:05.940Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"connection.update","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:29:05.946Z","level":"info","category":"webhook","msg":"Evento ignorado: connection.update","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:29:07.343Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"connection.update","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:29:07.350Z","level":"info","category":"webhook","msg":"Evento ignorado: connection.update","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:29:16.674Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:29:16.680Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"556699532830-1604167658@g.us","tipos":"imageMessage, messageContextInfo, base64"}}
-{"ts":"2026-05-15T18:32:15.023Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:32:15.027Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"554299614855-1574987193@g.us","tipos":"imageMessage, messageContextInfo, base64"}}
-{"ts":"2026-05-15T18:33:07.024Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:33:07.028Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"senderKeyDistributionMessage, reactionMessage"}}
-{"ts":"2026-05-15T18:33:07.353Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:33:07.363Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
-{"ts":"2026-05-15T18:34:22.884Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:34:22.890Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"554299614855-1574987193@g.us","tipos":"imageMessage, messageContextInfo, base64"}}
-{"ts":"2026-05-15T18:35:41.109Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:35:41.117Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"senderKeyDistributionMessage, ephemeralMessage"}}
-{"ts":"2026-05-15T18:37:16.014Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:37:16.019Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"554299614855-1574987193@g.us","tipos":"imageMessage, messageContextInfo, base64"}}
-{"ts":"2026-05-15T18:40:47.836Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:40:47.853Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"senderKeyDistributionMessage, ephemeralMessage"}}
-{"ts":"2026-05-15T18:41:23.553Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:41:23.558Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363235822943755@g.us","tipos":"reactionMessage"}}
-{"ts":"2026-05-15T18:45:40.084Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:45:40.088Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"senderKeyDistributionMessage, reactionMessage"}}
-{"ts":"2026-05-15T18:45:40.522Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:45:40.526Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
-{"ts":"2026-05-15T18:47:45.962Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:47:45.979Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"1203****","role":"user","chars":453}}
-{"ts":"2026-05-15T18:47:45.984Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"852605"}}
-{"ts":"2026-05-15T18:50:47.855Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:50:47.864Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"senderKeyDistributionMessage, ephemeralMessage"}}
-{"ts":"2026-05-15T18:52:02.150Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:52:02.154Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"554299614855-1574987193@g.us","tipos":"imageMessage, messageContextInfo, base64"}}
-{"ts":"2026-05-15T18:52:53.051Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:52:53.089Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"1203****","role":"user","chars":78}}
-{"ts":"2026-05-15T18:52:53.093Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"852605"}}
-{"ts":"2026-05-15T18:53:37.060Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:53:37.063Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:53:37.078Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":1449}}
-{"ts":"2026-05-15T18:53:37.082Z","level":"info","category":"webhook","msg":"Agente Interno [ORIENTADOR]: consultando sistema","data":{"tenant":"confluence"}}
-{"ts":"2026-05-15T18:53:43.177Z","level":"info","category":"webhook","msg":"Orientador: resposta enviada","data":{"tenant":"confluence","chars":692}}
-{"ts":"2026-05-15T18:53:44.291Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.update","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:53:44.295Z","level":"info","category":"webhook","msg":"Evento ignorado: messages.update","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:54:11.700Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.update","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:54:11.704Z","level":"info","category":"webhook","msg":"Evento ignorado: messages.update","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:54:11.728Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:54:11.732Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"554299614855-1574987193@g.us","tipos":"imageMessage, messageContextInfo, base64"}}
-{"ts":"2026-05-15T18:55:57.023Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:55:57.028Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"senderKeyDistributionMessage, reactionMessage"}}
-{"ts":"2026-05-15T18:55:57.833Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-15T18:55:57.837Z","level":"info","category":"webhook","msg":"Mídia ignorada (sem texto)","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
-{"ts":"2026-05-17T07:04:59.093Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"connection.update","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:04:59.098Z","level":"info","category":"webhook","msg":"Evento ignorado: connection.update","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:05:01.709Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"connection.update","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:05:01.714Z","level":"info","category":"webhook","msg":"Evento ignorado: connection.update","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:07:07.088Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"connection.update","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:07:07.095Z","level":"info","category":"webhook","msg":"Evento ignorado: connection.update","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:07:09.400Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"connection.update","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:07:09.408Z","level":"info","category":"webhook","msg":"Evento ignorado: connection.update","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:09.452Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:09.475Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:10.405Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:10.411Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:11.207Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:11.213Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:12.659Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:12.665Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:13.923Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:13.928Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:14.001Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:14.008Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:15.663Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:15.668Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:15.990Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:15.995Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:16.575Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:16.578Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"reactionMessage"}}
-{"ts":"2026-05-17T07:08:17.179Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:17.182Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
-{"ts":"2026-05-17T07:08:17.739Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:17.744Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:18.546Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:18.553Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:19.120Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:19.125Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
-{"ts":"2026-05-17T07:08:20.258Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:20.263Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:20.998Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:21.006Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:21.592Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:21.598Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"reactionMessage"}}
-{"ts":"2026-05-17T07:08:22.002Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:22.008Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
-{"ts":"2026-05-17T07:08:23.061Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:23.067Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:23.640Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:23.643Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"reactionMessage"}}
-{"ts":"2026-05-17T07:08:24.129Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:24.133Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
-{"ts":"2026-05-17T07:08:25.805Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:25.811Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:25.871Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:25.878Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:26.729Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:26.736Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:27.168Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:27.174Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:27.778Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:27.784Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:28.381Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:28.388Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:28.942Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:28.946Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"senderKeyDistributionMessage, reactionMessage"}}
-{"ts":"2026-05-17T07:08:29.478Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:29.482Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
-{"ts":"2026-05-17T07:08:30.123Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:30.132Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:30.737Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:30.743Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
-{"ts":"2026-05-17T07:08:31.303Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
 {"ts":"2026-05-17T07:08:31.308Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
 {"ts":"2026-05-17T07:08:31.973Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
 {"ts":"2026-05-17T07:08:31.984Z","level":"error","category":"webhook","msg":"Tenant não encontrado para instance=\"artemis-confluence\"","data":{"instance":"artemis-confluence"}}
@@ -1998,3 +1840,161 @@
 {"ts":"2026-05-17T07:34:21.892Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
 {"ts":"2026-05-17T07:34:21.933Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"user","chars":0}}
 {"ts":"2026-05-17T07:34:21.935Z","level":"info","category":"webhook","msg":"Whitelist: contato bloqueado (mensagem salva, bot não responde)","data":{"phone":"5566****","variants":"5566996278261,+5566996278261,556696278261,+556696278261","allowed":"+556699086599"}}
+{"ts":"2026-05-17T07:48:59.438Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T07:48:59.441Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T07:48:59.459Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":5}}
+{"ts":"2026-05-17T07:51:37.586Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T07:51:37.603Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"user","chars":0}}
+{"ts":"2026-05-17T07:51:37.607Z","level":"info","category":"webhook","msg":"Whitelist: contato bloqueado (mensagem salva, bot não responde)","data":{"phone":"5566****","variants":"5566996278261,+5566996278261,556696278261,+556696278261","allowed":"+556699086599"}}
+{"ts":"2026-05-17T17:28:25.761Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:28:25.802Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"reactionMessage"}}
+{"ts":"2026-05-17T17:29:26.399Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:29:26.460Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"user","chars":0}}
+{"ts":"2026-05-17T17:29:26.463Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"862384"}}
+{"ts":"2026-05-17T17:30:14.249Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:30:14.283Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"1203****","role":"user","chars":11}}
+{"ts":"2026-05-17T17:30:14.290Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"044383"}}
+{"ts":"2026-05-17T17:30:21.929Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:30:21.931Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"reactionMessage"}}
+{"ts":"2026-05-17T17:30:22.595Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:30:22.598Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
+{"ts":"2026-05-17T17:30:24.223Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:30:24.226Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"senderKeyDistributionMessage, reactionMessage"}}
+{"ts":"2026-05-17T17:30:42.021Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:30:42.064Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"1203****","role":"user","chars":0}}
+{"ts":"2026-05-17T17:30:42.066Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"044383"}}
+{"ts":"2026-05-17T17:30:51.215Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:30:51.217Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
+{"ts":"2026-05-17T17:30:55.785Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:30:55.788Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:30:55.799Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":2}}
+{"ts":"2026-05-17T17:31:03.559Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:31:03.561Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
+{"ts":"2026-05-17T17:31:20.254Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:31:20.256Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
+{"ts":"2026-05-17T17:31:35.446Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:31:35.449Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:31:35.462Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":2}}
+{"ts":"2026-05-17T17:31:41.670Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:31:41.714Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5542****","role":"user","chars":201}}
+{"ts":"2026-05-17T17:31:41.715Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"987193"}}
+{"ts":"2026-05-17T17:32:45.766Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:32:45.767Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:32:45.777Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":2}}
+{"ts":"2026-05-17T17:33:09.565Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:33:09.567Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"556699273391-1595862384@g.us","tipos":"senderKeyDistributionMessage, messageContextInfo, reactionMessage"}}
+{"ts":"2026-05-17T17:34:49.767Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:34:49.771Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:34:49.784Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":2}}
+{"ts":"2026-05-17T17:34:49.788Z","level":"info","category":"webhook","msg":"Agente Interno [SIMULADOR]: mensagem para si mesmo → processa como lead","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T17:35:30.170Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:35:30.174Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
+{"ts":"2026-05-17T17:35:42.182Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:35:42.185Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:35:42.197Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":51}}
+{"ts":"2026-05-17T17:35:42.199Z","level":"info","category":"webhook","msg":"Agente Interno [SIMULADOR]: mensagem para si mesmo → processa como lead","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T17:37:30.531Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:37:30.536Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:37:30.980Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":42}}
+{"ts":"2026-05-17T17:37:30.984Z","level":"info","category":"webhook","msg":"Agente Interno [SIMULADOR]: mensagem para si mesmo → processa como lead","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T17:38:21.756Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:38:21.759Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:38:21.768Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":21}}
+{"ts":"2026-05-17T17:38:21.771Z","level":"info","category":"webhook","msg":"Agente Interno [SIMULADOR]: mensagem para si mesmo → processa como lead","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T17:43:03.386Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:43:03.460Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"user","chars":143}}
+{"ts":"2026-05-17T17:43:03.463Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"167658"}}
+{"ts":"2026-05-17T17:44:23.018Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:44:23.021Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:44:23.032Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":2}}
+{"ts":"2026-05-17T17:44:23.035Z","level":"info","category":"webhook","msg":"Agente Interno [SIMULADOR]: mensagem para si mesmo → processa como lead","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T17:45:18.959Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:45:18.962Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:45:18.977Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":39}}
+{"ts":"2026-05-17T17:45:18.980Z","level":"info","category":"webhook","msg":"Agente Interno [SIMULADOR]: mensagem para si mesmo → processa como lead","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T17:45:23.054Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:45:23.057Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"reactionMessage"}}
+{"ts":"2026-05-17T17:45:23.957Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:45:23.960Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
+{"ts":"2026-05-17T17:56:19.863Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:56:19.874Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"reactionMessage"}}
+{"ts":"2026-05-17T17:56:20.471Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:56:20.476Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
+{"ts":"2026-05-17T17:58:16.030Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:58:16.033Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:58:16.049Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":3}}
+{"ts":"2026-05-17T17:58:16.053Z","level":"info","category":"webhook","msg":"Agente Interno [ORIENTADOR]: consultando sistema","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T17:58:19.506Z","level":"info","category":"webhook","msg":"Orientador: resposta enviada","data":{"tenant":"confluence","chars":100}}
+{"ts":"2026-05-17T17:58:33.025Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:58:33.034Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:58:33.047Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":6}}
+{"ts":"2026-05-17T17:58:33.051Z","level":"info","category":"webhook","msg":"Agente Interno [ORIENTADOR]: consultando sistema","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T17:58:37.729Z","level":"info","category":"webhook","msg":"Orientador: resposta enviada","data":{"tenant":"confluence","chars":112}}
+{"ts":"2026-05-17T17:59:35.428Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:59:35.434Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T17:59:35.452Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":74}}
+{"ts":"2026-05-17T17:59:35.455Z","level":"info","category":"webhook","msg":"Agente Interno [ORIENTADOR]: consultando sistema","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T17:59:38.385Z","level":"info","category":"webhook","msg":"Orientador: resposta enviada","data":{"tenant":"confluence","chars":156}}
+{"ts":"2026-05-17T18:01:14.626Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:01:14.632Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
+{"ts":"2026-05-17T18:01:56.215Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:01:56.219Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:01:56.454Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":0}}
+{"ts":"2026-05-17T18:01:56.489Z","level":"info","category":"webhook","msg":"Agente Interno [ORIENTADOR]: consultando sistema","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T18:01:59.971Z","level":"info","category":"webhook","msg":"Orientador: resposta enviada","data":{"tenant":"confluence","chars":111}}
+{"ts":"2026-05-17T18:02:09.234Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:02:09.256Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5542****","role":"user","chars":237}}
+{"ts":"2026-05-17T18:02:09.260Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"987193"}}
+{"ts":"2026-05-17T18:02:41.653Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:02:41.656Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:02:41.669Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":17}}
+{"ts":"2026-05-17T18:02:41.672Z","level":"info","category":"webhook","msg":"Agente Interno [ORIENTADOR]: consultando sistema","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T18:02:45.578Z","level":"info","category":"webhook","msg":"Orientador: resposta enviada","data":{"tenant":"confluence","chars":135}}
+{"ts":"2026-05-17T18:03:10.113Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:03:10.120Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:03:10.133Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":54}}
+{"ts":"2026-05-17T18:03:10.136Z","level":"info","category":"webhook","msg":"Agente Interno [ORIENTADOR]: consultando sistema","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T18:03:14.356Z","level":"info","category":"webhook","msg":"Orientador: resposta enviada","data":{"tenant":"confluence","chars":285}}
+{"ts":"2026-05-17T18:03:50.974Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:03:50.977Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:03:50.988Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":55}}
+{"ts":"2026-05-17T18:03:50.991Z","level":"info","category":"webhook","msg":"Agente Interno [ORIENTADOR]: consultando sistema","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T18:03:56.462Z","level":"info","category":"webhook","msg":"Orientador: resposta enviada","data":{"tenant":"confluence","chars":292}}
+{"ts":"2026-05-17T18:04:15.245Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:04:15.304Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5542****","role":"user","chars":250}}
+{"ts":"2026-05-17T18:04:15.307Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"987193"}}
+{"ts":"2026-05-17T18:04:24.087Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:04:24.098Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:04:24.112Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":43}}
+{"ts":"2026-05-17T18:04:24.117Z","level":"info","category":"webhook","msg":"Agente Interno [ORIENTADOR]: consultando sistema","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T18:04:27.632Z","level":"info","category":"webhook","msg":"Orientador: resposta enviada","data":{"tenant":"confluence","chars":194}}
+{"ts":"2026-05-17T18:04:37.671Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:04:37.674Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:04:37.688Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":16}}
+{"ts":"2026-05-17T18:04:37.693Z","level":"info","category":"webhook","msg":"Agente Interno [ORIENTADOR]: consultando sistema","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T18:04:40.735Z","level":"info","category":"webhook","msg":"Orientador: resposta enviada","data":{"tenant":"confluence","chars":250}}
+{"ts":"2026-05-17T18:05:10.419Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:05:10.423Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:05:10.450Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":58}}
+{"ts":"2026-05-17T18:05:10.454Z","level":"info","category":"webhook","msg":"Agente Interno [ORIENTADOR]: consultando sistema","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T18:05:14.492Z","level":"info","category":"webhook","msg":"Orientador: resposta enviada","data":{"tenant":"confluence","chars":168}}
+{"ts":"2026-05-17T18:05:47.294Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:05:47.299Z","level":"info","category":"webhook","msg":"Mensagem própria: salva sem resposta do bot (IGNORE_FROM_ME=false)","data":{"instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:05:47.315Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5566****","role":"operator","chars":55}}
+{"ts":"2026-05-17T18:05:47.319Z","level":"info","category":"webhook","msg":"Agente Interno [ORIENTADOR]: consultando sistema","data":{"tenant":"confluence"}}
+{"ts":"2026-05-17T18:05:58.264Z","level":"info","category":"webhook","msg":"Orientador: resposta enviada","data":{"tenant":"confluence","chars":118}}
+{"ts":"2026-05-17T18:08:00.078Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:08:00.104Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5542****","role":"user","chars":264}}
+{"ts":"2026-05-17T18:08:00.107Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"987193"}}
+{"ts":"2026-05-17T18:09:57.420Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:09:57.446Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5542****","role":"user","chars":261}}
+{"ts":"2026-05-17T18:09:57.458Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"987193"}}
+{"ts":"2026-05-17T18:11:21.929Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:11:21.934Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"reactionMessage"}}
+{"ts":"2026-05-17T18:11:22.570Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:11:22.574Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}
+{"ts":"2026-05-17T18:12:38.501Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:12:38.531Z","level":"info","category":"webhook","msg":"Mensagem salva","data":{"tenant":"confluence","phone":"5542****","role":"user","chars":302}}
+{"ts":"2026-05-17T18:12:38.534Z","level":"info","category":"webhook","msg":"Grupo: salvo, bot não responde (ignoreGroups=true)","data":{"id":"987193"}}
+{"ts":"2026-05-17T18:16:10.309Z","level":"info","category":"webhook","msg":"Payload recebido","data":{"event":"messages.upsert","instance":"artemis-confluence"}}
+{"ts":"2026-05-17T18:16:10.313Z","level":"info","category":"webhook","msg":"Mensagem sem texto nem mídia ignorada","data":{"jid":"120363421367130287@g.us","tipos":"ephemeralMessage"}}

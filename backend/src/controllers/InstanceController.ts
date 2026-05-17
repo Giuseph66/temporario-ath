@@ -65,11 +65,10 @@ export async function getOwnerPhone(req: AuthRequest, res: Response): Promise<Re
         if (!tenant?.evolutionInstance) return res.json({ phone: null });
         const phone = await EvolutionService.getOwnerPhone(tenant.evolutionInstance);
         if (phone) {
-            // Persiste no settingsJson do agent para uso no webhook
+            // Persiste na coluna lida por /api/agent e usada pelo webhook.
             const agent = await prisma.agent.findFirst({ where: { tenantId: req.tenantId } });
             if (agent) {
-                const s = (agent.settingsJson as Record<string, unknown>) ?? {};
-                await prisma.agent.update({ where: { id: agent.id }, data: { settingsJson: { ...s, ownerPhone: phone } } });
+                await prisma.agent.update({ where: { id: agent.id }, data: { ownerPhone: phone } });
             }
         }
         return res.json({ phone });

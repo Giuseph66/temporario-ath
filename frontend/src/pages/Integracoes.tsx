@@ -637,7 +637,7 @@ function BotIcon({ size = 20 }: { size?: number }) {
 function AdminChatPanel() {
     const qc = useQueryClient();
 
-    const { isLoading } = useQuery<{ phone: string | null }>({
+    const { data: instancePhone, isLoading } = useQuery<{ phone: string | null }>({
         queryKey: ['instance-phone'],
         queryFn: () => axios.get('/api/instances/phone').then(r => r.data),
     });
@@ -649,7 +649,7 @@ function AdminChatPanel() {
 
     const adminEnabled   = agent?.adminChatEnabled === true;
     const internalMode   = agent?.agentInternalMode ?? 'orientador';
-    const ownerPhone     = agent?.ownerPhone ?? undefined;
+    const ownerPhone     = agent?.ownerPhone ?? instancePhone?.phone ?? undefined;
 
     const refreshPhone = useMutation({
         mutationFn: () => axios.get('/api/instances/phone'),

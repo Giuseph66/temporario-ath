@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-function getClient() {
+function getClient(timeoutMs = 15000) {
     const baseURL = process.env.EVOLUTION_BASE_URL;
     const globalApiKey = process.env.EVOLUTION_API_KEY;
     if (!baseURL || !globalApiKey) {
@@ -9,9 +9,12 @@ function getClient() {
     return axios.create({
         baseURL,
         headers: { apikey: globalApiKey },
-        timeout: 15000,
+        timeout: timeoutMs,
     });
 }
+
+// Larger timeout for media uploads — videos can take 60-120s to process
+function getMediaClient() { return getClient(120_000); }
 
 export const EvolutionService = {
     async sendText(instance: string, phone: string, text: string): Promise<void> {
@@ -94,6 +97,40 @@ export const EvolutionService = {
         } catch {
             return [];
         }
+    },
+
+    async sendMedia(
+        instance: string,
+        phone: string,
+        mediatype: 'image' | 'audio' | 'video' | 'document',
+        base64: string,
+        mimetype: string,
+        caption?: string,
+        fileName?: string,
+    ): Promise<any> {
+        const res = await getMediaClient().post(`/message/sendMedia/${instance}`, {
+            number: phone,
+            mediatype,
+            media: base64,
+            mimetype,
+            caption: caption ?? '',
+            // Evolution requires fileName for document/video when using base64
+            fileName: fileName ?? undefined,
+        });
+        return res.data;
+    },
+
+    async sendWhatsAppAudio(
+        instance: string,
+        phone: string,
+        base64: string,
+    ): Promise<any> {
+        const res = await getMediaClient().post(`/message/sendWhatsAppAudio/${instance}`, {
+            number: phone,
+            audio: base64,
+            encoding: true,
+        });
+        return res.data;
     },
 
     async getMediaBase64(instance: string, messageData: object): Promise<{ base64: string; mediaType: string } | null> {

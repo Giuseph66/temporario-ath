@@ -36,7 +36,8 @@ export type MediaMeta = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtDur(s: number) {
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    const t = Math.floor(s);
+    return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
 
 // Mime → font-awesome-ish icon
@@ -52,7 +53,7 @@ function docIcon(mime = '') {
 
 // ─── Lazy loader hook ─────────────────────────────────────────────────────────
 
-type LoadState = 'idle' | 'loading' | 'loaded' | 'error';
+type LoadState = 'idle' | 'loading' | 'loaded' | 'error' | 'unavailable';
 
 function base64ToBlob(b64: string, mime: string): Blob {
     const binary = atob(b64);
@@ -72,6 +73,8 @@ function useMediaLoad(messageId: string, autoLoad = false) {
         return () => { if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current); };
     }, []);
 
+    function retry() { setState('idle'); }
+
     async function load() {
         if (state === 'loading' || state === 'loaded') return;
         setState('loading');
@@ -85,13 +88,19 @@ function useMediaLoad(messageId: string, autoLoad = false) {
             setSrc(url);
             setMime(resolvedMime);
             setState('loaded');
-        } catch (e) {
-            console.error(`[MediaBubble] load failed ${messageId}:`, e);
-            setState('error');
+        } catch (e: any) {
+            const status = e?.response?.status;
+            // 404 = no messageData (operator-sent before fix) — show graceful placeholder
+            if (status === 404 || status === 400) {
+                setState('unavailable');
+            } else {
+                console.error(`[MediaBubble] load failed ${messageId}:`, e);
+                setState('error');
+            }
         }
     }
 
-    return { state, src, mime, load };
+    return { state, src, mime, load, retry };
 }
 
 // ─── Placeholder ──────────────────────────────────────────────────────────────
@@ -135,8 +144,22 @@ function Spinner() {
 // ─── Individual media renderers ───────────────────────────────────────────────
 
 function ImageMedia({ messageId, media, textColor }: { messageId: string; media: MediaMeta; textColor: string }) {
-    const { state, src, load } = useMediaLoad(messageId);
+    const { state, src, load, retry } = useMediaLoad(messageId);
     const [lightbox, setLightbox] = useState(false);
+    const placeholderRef = useRef<HTMLDivElement>(null);
+
+    // Auto-load when placeholder enters viewport
+    useEffect(() => {
+        if (state !== 'idle') return;
+        const el = placeholderRef.current;
+        if (!el) return;
+        const observer = new IntersectionObserver(
+            ([entry]) => { if (entry.isIntersecting) { load(); observer.disconnect(); } },
+            { threshold: 0.1 }
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [state]);
 
     return (
         <>
@@ -164,9 +187,13 @@ function ImageMedia({ messageId, media, textColor }: { messageId: string; media:
                 </div>
             )}
 
-            {state === 'idle'    && <Placeholder icon="🖼" label="Clique para carregar" onClick={load} />}
-            {state === 'loading' && <Spinner />}
-            {state === 'loaded'  && src && (
+            {state === 'idle' && (
+                <div ref={placeholderRef}>
+                    <Placeholder icon="🖼" label="Carregando…" />
+                </div>
+            )}
+            {state === 'loading'     && <Spinner />}
+            {state === 'loaded'      && src && (
                 <img
                     src={src}
                     alt={media.caption || 'imagem'}
@@ -174,26 +201,45 @@ function ImageMedia({ messageId, media, textColor }: { messageId: string; media:
                     style={{ maxWidth: 300, maxHeight: 320, borderRadius: 12, display: 'block', cursor: 'zoom-in', objectFit: 'cover' }}
                 />
             )}
-            {state === 'error'   && <ErrorMsg text="Falha ao carregar imagem" />}
-            {media.caption       && <Caption text={media.caption} color={textColor} />}
+            {state === 'unavailable' && <Placeholder icon="🖼" label="Imagem enviada" width={180} height={80} />}
+            {state === 'error'       && <ErrorMsg text="Falha ao carregar imagem" onRetry={retry} />}
+            {media.caption           && <Caption text={media.caption} color={textColor} />}
         </>
     );
 }
 
-function CustomAudioPlayer({ src, mime, media, textColor, isAgent }: { src: string; mime: string; media: MediaMeta; textColor: string; isAgent: boolean }) {
-    const audioRef = useRef<HTMLAudioElement>(null);
+const SPEEDS = [1, 1.5, 2, 2.5, 3];
+
+function CustomAudioPlayer({ src, media, textColor, isAgent }: { src: string; mime?: string; media: MediaMeta; textColor: string; isAgent: boolean }) {
+    const audioRef    = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [progress, setProgress] = useState(0);
+    const [progress, setProgress]   = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(media.duration || 0);
+    const [duration, setDuration]   = useState(media.duration || 0);
+    const [speedIdx, setSpeedIdx]   = useState(0); // index into SPEEDS
+
+    const speed = SPEEDS[speedIdx];
+
+    useEffect(() => {
+        // Blob URL carries MIME type — load() triggers browser resource selection
+        if (audioRef.current) {
+            audioRef.current.load();
+        }
+    }, [src]);
 
     const togglePlay = () => {
         if (!audioRef.current) return;
         if (isPlaying) {
             audioRef.current.pause();
         } else {
-            audioRef.current.play();
+            audioRef.current.play().catch(e => console.error('[Audio] play() failed:', e));
         }
+    };
+
+    const cycleSpeed = () => {
+        const next = (speedIdx + 1) % SPEEDS.length;
+        setSpeedIdx(next);
+        if (audioRef.current) audioRef.current.playbackRate = SPEEDS[next];
     };
 
     const handleTimeUpdate = () => {
@@ -209,15 +255,15 @@ function CustomAudioPlayer({ src, mime, media, textColor, isAgent }: { src: stri
         if (audioRef.current.duration && audioRef.current.duration !== Infinity) {
             setDuration(audioRef.current.duration);
         }
+        // Apply current speed when audio loads
+        audioRef.current.playbackRate = speed;
     };
 
     const handleEnded = () => {
         setIsPlaying(false);
         setProgress(0);
         setCurrentTime(0);
-        if (audioRef.current) {
-            audioRef.current.currentTime = 0;
-        }
+        if (audioRef.current) audioRef.current.currentTime = 0;
     };
 
     const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -227,16 +273,18 @@ function CustomAudioPlayer({ src, mime, media, textColor, isAgent }: { src: stri
         setProgress(Number(e.target.value));
     };
 
-    const trackColor = isAgent ? 'rgba(255,255,255,0.2)' : 'var(--line-2)';
-    const thumbColor = isAgent ? '#fff' : 'var(--accent)';
-    const iconColor = isAgent ? 'rgba(255,255,255,0.7)' : 'var(--ink-3)';
-    const btnBg = isAgent ? 'rgba(255,255,255,0.15)' : 'var(--accent-soft)';
-    const btnColor = isAgent ? '#fff' : 'var(--accent)';
+    const trackColor  = isAgent ? 'rgba(255,255,255,0.2)' : 'var(--line-2)';
+    const thumbColor  = isAgent ? '#fff' : 'var(--accent)';
+    const btnBg       = isAgent ? 'rgba(255,255,255,0.15)' : 'var(--accent-soft)';
+    const btnColor    = isAgent ? '#fff' : 'var(--accent)';
+    const speedActive = speedIdx > 0;
 
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 260, padding: '4px 0' }}>
+            {/* Blob URL already carries MIME — src direct, no <source> child needed */}
             <audio
                 ref={audioRef}
+                src={src}
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
                 onEnded={handleEnded}
@@ -244,85 +292,87 @@ function CustomAudioPlayer({ src, mime, media, textColor, isAgent }: { src: stri
                 onPause={() => setIsPlaying(false)}
                 onError={e => console.error('[Audio] decode error:', e)}
                 style={{ display: 'none' }}
-            >
-                <source src={src} type={mime || 'audio/ogg; codecs=opus'} />
-            </audio>
-            
-            <button 
+            />
+
+            {/* Play / Pause */}
+            <button
                 onClick={togglePlay}
-                style={{ 
-                    width: 44, height: 44, borderRadius: '50%', 
+                style={{
+                    width: 44, height: 44, borderRadius: '50%',
                     background: btnBg, color: btnColor,
                     border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', flexShrink: 0, transition: 'transform 0.2s, background 0.2s',
+                    cursor: 'pointer', flexShrink: 0,
+                    transition: 'transform 0.15s, opacity 0.15s',
                 }}
-                onMouseOver={e => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.background = isAgent ? 'rgba(255,255,255,0.25)' : 'var(--accent-hover)';
-                }}
-                onMouseOut={e => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.background = btnBg;
-                }}
+                onMouseOver={e => e.currentTarget.style.opacity = '0.8'}
+                onMouseOut={e  => e.currentTarget.style.opacity = '1'}
             >
                 {isPlaying ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                    </svg>
                 ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: 3 }}><path d="M8 5v14l11-7z"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: 3 }}>
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
                 )}
             </button>
 
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
+            {/* Track + time */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div style={{ position: 'relative', height: 16, display: 'flex', alignItems: 'center' }}>
-                    <div style={{ position: 'absolute', width: '100%', height: 4, background: trackColor, borderRadius: 2, overflow: 'hidden' }}>
-                        <div style={{ width: `${progress}%`, height: '100%', background: thumbColor, borderRadius: 2 }} />
+                    {/* Track background */}
+                    <div style={{ position: 'absolute', width: '100%', height: 4, background: trackColor, borderRadius: 2 }}>
+                        <div style={{ width: `${progress}%`, height: '100%', background: thumbColor, borderRadius: 2, transition: 'width 0.1s' }} />
                     </div>
-                    <input 
-                        type="range" 
-                        min="0" max="100" 
-                        value={progress}
+                    {/* Thumb knob */}
+                    <div style={{
+                        position: 'absolute',
+                        left: `clamp(0px, calc(${progress}% - 6px), calc(100% - 12px))`,
+                        width: 12, height: 12, background: thumbColor,
+                        borderRadius: '50%', pointerEvents: 'none',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                    }} />
+                    {/* Invisible range input on top for interaction */}
+                    <input
+                        type="range" min="0" max="100" value={progress}
                         onChange={handleSeek}
-                        style={{ 
-                            position: 'absolute', width: '100%', height: '100%', 
-                            opacity: 0, cursor: 'pointer', margin: 0 
-                        }}
-                    />
-                    <div 
-                        style={{ 
-                            position: 'absolute', 
-                            left: `calc(${progress}% - 6px)`, 
-                            width: 12, height: 12, 
-                            background: thumbColor, 
-                            borderRadius: '50%', 
-                            pointerEvents: 'none',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                        }} 
+                        style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0, cursor: 'pointer', margin: 0 }}
                     />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: textColor, opacity: 0.7, fontFamily: "'Geist Mono', monospace", fontWeight: 500 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: textColor, opacity: 0.65, fontFamily: "'Geist Mono', monospace", fontWeight: 500 }}>
                     <span>{fmtDur(currentTime)}</span>
                     <span>{fmtDur(duration || 0)}</span>
                 </div>
             </div>
-            
-            <div style={{ 
-                width: 36, height: 36, borderRadius: '50%', 
-                background: isAgent ? 'rgba(255,255,255,0.1)' : 'var(--paper-3)', 
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                border: `1px solid ${trackColor}`
-            }}>
-                {media.ptt ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-                ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-                )}
-            </div>
+
+            {/* Speed selector */}
+            <button
+                onClick={cycleSpeed}
+                title="Velocidade de reprodução"
+                style={{
+                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                    background: speedActive ? btnBg : (isAgent ? 'rgba(255,255,255,0.08)' : 'var(--paper-3)'),
+                    border: `1px solid ${speedActive ? thumbColor : trackColor}`,
+                    color: speedActive ? btnColor : textColor,
+                    fontFamily: "'Geist Mono', monospace",
+                    fontSize: speed >= 2.5 ? 9 : 10,
+                    fontWeight: 700, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.15s',
+                    opacity: speedActive ? 1 : 0.6,
+                }}
+                onMouseOver={e => e.currentTarget.style.opacity = '1'}
+                onMouseOut={e  => e.currentTarget.style.opacity = speedActive ? '1' : '0.6'}
+            >
+                {speed}×
+            </button>
         </div>
     );
 }
 
 function AudioMedia({ messageId, media, textColor, isAgent }: { messageId: string; media: MediaMeta; textColor: string; isAgent: boolean }) {
-    const { state, src, mime, load } = useMediaLoad(messageId);
+    const { state, src, mime, load, retry } = useMediaLoad(messageId);
 
     const trackColor = isAgent ? 'rgba(255,255,255,0.2)' : 'var(--line-2)';
     const btnBg = isAgent ? 'rgba(255,255,255,0.15)' : 'var(--accent-soft)';
@@ -367,49 +417,53 @@ function AudioMedia({ messageId, media, textColor, isAgent }: { messageId: strin
             
             {state === 'loading' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 0' }}>
-                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: trackColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: 0.8 }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={btnColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                            <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite" />
-                        </svg>
+                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: btnBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {/* CSS spinner — animateTransform unreliable in React */}
+                        <div style={{
+                            width: 20, height: 20, borderRadius: '50%',
+                            border: `3px solid ${trackColor}`,
+                            borderTopColor: btnColor,
+                            animation: 'audio-spin 0.8s linear infinite',
+                        }} />
                     </div>
-                    
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, opacity: 0.6 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, opacity: 0.5 }}>
                         <div style={{ width: '100%', height: 4, background: trackColor, borderRadius: 2 }} />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: textColor, opacity: 0.7, fontFamily: "'Geist Mono', monospace", fontWeight: 500 }}>
-                            <span>Carregando…</span>
-                        </div>
+                        <span style={{ fontSize: 11, color: textColor, fontFamily: "'Geist Mono', monospace" }}>Carregando…</span>
                     </div>
                 </div>
             )}
             
-            {state === 'loaded' && src && (
+            {state === 'loaded'      && src && (
                 <CustomAudioPlayer src={src} mime={mime} media={media} textColor={textColor} isAgent={isAgent} />
             )}
-            
-            {state === 'error' && <ErrorMsg text="Falha ao carregar áudio" />}
+            {state === 'unavailable' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: textColor, opacity: 0.6 }}>
+                    <span>{media.ptt ? '🎤' : '🎵'}</span>
+                    <span>Áudio enviado{media.duration ? ` · ${fmtDur(media.duration)}` : ''}</span>
+                </div>
+            )}
+            {state === 'error' && <ErrorMsg text="Falha ao carregar áudio" onRetry={retry} />}
         </div>
     );
 }
 
 function VideoMedia({ messageId, media, textColor }: { messageId: string; media: MediaMeta; textColor: string }) {
-    const { state, src, load } = useMediaLoad(messageId);
+    const { state, src, load, retry } = useMediaLoad(messageId);
 
     return (
         <>
-            {state === 'idle'    && <Placeholder icon="▶" label={`Clique para carregar${media.duration ? ` · ${fmtDur(media.duration)}` : ''}`} onClick={load} />}
-            {state === 'loading' && <Spinner />}
-            {state === 'loaded'  && src && (
-                <video controls src={src} style={{ maxWidth: 300, borderRadius: 12, display: 'block' }} />
-            )}
-            {state === 'error'   && <ErrorMsg text="Falha ao carregar vídeo" />}
-            {media.caption       && <Caption text={media.caption} color={textColor} />}
+            {state === 'idle'        && <Placeholder icon="▶" label={`Clique para carregar${media.duration ? ` · ${fmtDur(media.duration)}` : ''}`} onClick={load} />}
+            {state === 'loading'     && <Spinner />}
+            {state === 'loaded'      && src && <video controls src={src} style={{ maxWidth: 300, borderRadius: 12, display: 'block' }} />}
+            {state === 'unavailable' && <Placeholder icon="▶" label="Vídeo enviado" width={180} height={80} />}
+            {state === 'error'       && <ErrorMsg text="Falha ao carregar vídeo" onRetry={retry} />}
+            {media.caption           && <Caption text={media.caption} color={textColor} />}
         </>
     );
 }
 
 function DocumentMedia({ messageId, media, textColor, isAgent }: { messageId: string; media: MediaMeta; textColor: string; isAgent: boolean }) {
-    const { state, src, load } = useMediaLoad(messageId);
+    const { state, src, load, retry } = useMediaLoad(messageId);
     const border = `1px solid ${isAgent ? 'rgba(255,255,255,0.2)' : 'var(--line-2)'}`;
     const icon = docIcon(media.mimeType);
 
@@ -431,14 +485,15 @@ function DocumentMedia({ messageId, media, textColor, isAgent }: { messageId: st
                     </div>
                 )}
                 <div style={{ marginTop: 8 }}>
-                    {state === 'idle'    && <button onClick={load} style={{ fontSize: 11, color: textColor, background: 'none', border, borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>⬇ Baixar</button>}
-                    {state === 'loading' && <span style={{ fontSize: 11, color: textColor, opacity: 0.6 }}>Carregando…</span>}
-                    {state === 'loaded'  && src && (
+                    {state === 'idle'        && <button onClick={load} style={{ fontSize: 11, color: textColor, background: 'none', border, borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>⬇ Baixar</button>}
+                    {state === 'loading'     && <span style={{ fontSize: 11, color: textColor, opacity: 0.6 }}>Carregando…</span>}
+                    {state === 'loaded'      && src && (
                         <a href={src} download={media.filename ?? 'arquivo'} style={{ fontSize: 11, color: 'var(--accent-ink)', textDecoration: 'underline' }}>
                             ⬇ Salvar arquivo
                         </a>
                     )}
-                    {state === 'error'   && <ErrorMsg text="Falha ao baixar" />}
+                    {state === 'unavailable' && <span style={{ fontSize: 11, color: textColor, opacity: 0.5 }}>Arquivo enviado</span>}
+                    {state === 'error'       && <ErrorMsg text="Falha ao baixar" onRetry={retry} />}
                 </div>
                 {media.caption && <Caption text={media.caption} color={textColor} />}
             </div>
@@ -446,8 +501,8 @@ function DocumentMedia({ messageId, media, textColor, isAgent }: { messageId: st
     );
 }
 
-function StickerMedia({ messageId, media }: { messageId: string; media: MediaMeta }) {
-    const { state, src, load } = useMediaLoad(messageId, true); // auto-load stickers
+function StickerMedia({ messageId }: { messageId: string }) {
+    const { state, src } = useMediaLoad(messageId, true); // auto-load stickers
 
     return (
         <div style={{ lineHeight: 0 }}>
@@ -533,8 +588,17 @@ function ContactMedia({ media }: { media: MediaMeta }) {
 
 // ─── Micro helpers ────────────────────────────────────────────────────────────
 
-function ErrorMsg({ text }: { text: string }) {
-    return <span style={{ fontSize: 11, color: 'var(--danger)', display: 'block' }}>{text}</span>;
+function ErrorMsg({ text, onRetry }: { text: string; onRetry?: () => void }) {
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 11, color: 'var(--danger)' }}>{text}</span>
+            {onRetry && (
+                <button onClick={onRetry} style={{ fontSize: 10, color: 'var(--accent-ink)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontFamily: 'inherit' }}>
+                    Tentar novamente
+                </button>
+            )}
+        </div>
+    );
 }
 
 function Caption({ text, color }: { text: string; color: string }) {
@@ -554,6 +618,15 @@ export function MediaBubble({
 }) {
     const textColor = isAgent ? 'var(--bubble-agent-color)' : 'var(--ink-1)';
 
+    return (
+        <>
+            <style>{`@keyframes audio-spin { to { transform: rotate(360deg); } }`}</style>
+            {renderMedia()}
+        </>
+    );
+
+    function renderMedia() {
+
     switch (media.type) {
         case 'image':
             return <ImageMedia    messageId={messageId} media={media} textColor={textColor} />;
@@ -564,7 +637,7 @@ export function MediaBubble({
         case 'document':
             return <DocumentMedia messageId={messageId} media={media} textColor={textColor} isAgent={isAgent} />;
         case 'sticker':
-            return <StickerMedia  messageId={messageId} media={media} />;
+            return <StickerMedia  messageId={messageId} />;
         case 'location':
             return <LocationMedia media={media} />;
         case 'contact':
@@ -577,4 +650,5 @@ export function MediaBubble({
                 </div>
             );
     }
+  }
 }

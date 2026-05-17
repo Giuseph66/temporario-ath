@@ -171,7 +171,7 @@ const cancelAsaasPaymentDecl: FunctionDeclaration = {
 
 const createFollowUpDecl: FunctionDeclaration = {
     name: "create_follow_up",
-    description: "Cria uma tarefa futura para chamar novamente APENAS o lead atual. Use somente quando o cliente pedir retorno futuro ou demonstrar interesse para continuar depois. Nunca use para campanhas em massa.",
+    description: "Cria uma tarefa futura para chamar novamente APENAS o lead atual. Use quando o cliente pedir retorno futuro, inclusive frases relativas como 'daqui 10 min', 'em 2 horas' ou 'amanhã'. Converta sempre para data/hora ISO futura. Nunca use para campanhas em massa.",
     parameters: {
         type: SchemaType.OBJECT,
         properties: {
@@ -191,6 +191,57 @@ const createFollowUpDecl: FunctionDeclaration = {
         required: ["runAt", "messageTemplate", "reason"]
     }
 };
+
+function normalizeText(value: string): string {
+    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function parseRelativeFollowUp(message: string): { runAt: Date; label: string; reason: string } | null {
+    const normalized = normalizeText(message);
+    const match = normalized.match(/(?:daqui|em)\s+(\d{1,3})\s*(min(?:uto)?s?|m|h|hr|hrs|hora?s?|dia?s?)/i);
+    if (!match) return null;
+
+    const hasFollowUpIntent = [
+        'me chama',
+        'chama',
+        'retorna',
+        'retorno',
+        'me lembra',
+        'lembra',
+        'manda mensagem',
+        'falar',
+        'conversar',
+        'livre',
+        'tempinho',
+        'agora nao',
+        'depois',
+    ].some(term => normalized.includes(term));
+    if (!hasFollowUpIntent) return null;
+
+    const amount = Number(match[1]);
+    const unit = match[2];
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+
+    let minutes = amount;
+    let labelUnit = amount === 1 ? 'minuto' : 'minutos';
+    if (/^(h|hr|hrs|hora)/.test(unit)) {
+        minutes = amount * 60;
+        labelUnit = amount === 1 ? 'hora' : 'horas';
+    } else if (/^dia/.test(unit)) {
+        minutes = amount * 1440;
+        labelUnit = amount === 1 ? 'dia' : 'dias';
+    }
+
+    return {
+        runAt: new Date(Date.now() + minutes * 60_000),
+        label: `daqui ${amount} ${labelUnit}`,
+        reason: `Pedido explícito do lead: "${message}"`,
+    };
+}
+
+function asObject(value: unknown): Record<string, any> {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, any> : {};
+}
 
 export class AIService {
     // Resolve chave Gemini: banco do tenant > env > erro
@@ -270,6 +321,86 @@ Instrucao: ${input.prompt}
         }
 
         return false;
+    }
+
+    private async createLeadFollowUp(
+        userPhone: string,
+        tenantId: string | undefined,
+        runAt: Date,
+        messageTemplate: string,
+        reason: string,
+    ): Promise<{ ok: boolean; error?: string; runAt?: string }> {
+        const dbUser = await prisma.user.findFirst({ where: { phoneNumber: userPhone } });
+        const effectiveTenantId = tenantId ?? dbUser?.tenantId;
+
+        if (!dbUser || !effectiveTenantId) {
+            return { ok: false, error: 'Lead nao encontrado para criar follow-up.' };
+        }
+        if (Number.isNaN(runAt.getTime()) || runAt <= new Date()) {
+            return { ok: false, error: 'Data do follow-up invalida ou no passado.' };
+        }
+
+        await this.pausePendingLeadFollowUps(effectiveTenantId, dbUser.id);
+
+        await prisma.automation.create({
+            data: {
+                tenantId: effectiveTenantId,
+                name: `Follow-up - ${dbUser.name ?? dbUser.phoneNumber}`,
+                type: 'ONE_OFF',
+                status: 'ACTIVE',
+                triggerType: 'TIME',
+                scheduleJson: { runAt: runAt.toISOString() },
+                targetJson: { userId: dbUser.id },
+                conditionsJson: {
+                    requireLgpd: false,
+                    skipGroups: true,
+                    sendWindow: { start: '08:00', end: '18:00' },
+                    excludeEnrollmentStatuses: ['ENROLLED', 'CANCELLED'],
+                },
+                actionJson: {
+                    messageTemplate,
+                    internalNote: `[AUTOMACAO INTERNA] Follow-up criado pelo agente. Motivo: ${reason}`,
+                    cancelIfLeadInteracted: true,
+                },
+                limitsJson: { cooldownHours: 0 },
+                requiresApproval: false,
+                nextRunAt: runAt,
+            },
+        });
+
+        return { ok: true, runAt: runAt.toISOString() };
+    }
+
+    private async pausePendingLeadFollowUps(tenantId: string, userId: string): Promise<void> {
+        const pending = await prisma.automation.findMany({
+            where: {
+                tenantId,
+                status: 'ACTIVE',
+                type: 'ONE_OFF',
+                nextRunAt: { gt: new Date() },
+            },
+            select: {
+                id: true,
+                targetJson: true,
+                actionJson: true,
+            },
+        });
+
+        const oldFollowUpIds = pending
+            .filter(automation => {
+                const target = asObject(automation.targetJson);
+                const action = asObject(automation.actionJson);
+                return target.userId === userId
+                    && (action.cancelIfLeadInteracted === true || String(action.internalNote ?? '').includes('Follow-up criado pelo agente'));
+            })
+            .map(automation => automation.id);
+
+        if (oldFollowUpIds.length === 0) return;
+
+        await prisma.automation.updateMany({
+            where: { id: { in: oldFollowUpIds } },
+            data: { status: 'PAUSED', nextRunAt: null },
+        });
     }
 
     private async executeToolCall(name: string, args: any, userPhone: string, tenantId?: string): Promise<{ result: any; capturedPaymentUrl?: string }> {
@@ -424,40 +555,18 @@ Instrucao: ${input.prompt}
                 console.log(`✅ Link de pagamento gerado com sucesso: ${invoiceUrl}`);
 
             } else if (name === "create_follow_up") {
-                const dbUser = await prisma.user.findFirst({ where: { phoneNumber: userPhone } });
-                const effectiveTenantId = tenantId ?? dbUser?.tenantId;
                 const runAt = new Date(args.runAt);
-
-                if (!dbUser || !effectiveTenantId) {
-                    toolResult = { error: 'Lead nao encontrado para criar follow-up.' };
-                } else if (Number.isNaN(runAt.getTime()) || runAt <= new Date()) {
-                    toolResult = { error: 'Data do follow-up invalida ou no passado.' };
+                const created = await this.createLeadFollowUp(
+                    userPhone,
+                    tenantId,
+                    runAt,
+                    args.messageTemplate,
+                    args.reason,
+                );
+                if (!created.ok) {
+                    toolResult = { error: created.error };
                 } else {
-                    await prisma.automation.create({
-                        data: {
-                            tenantId: effectiveTenantId,
-                            name: `Follow-up - ${dbUser.name ?? dbUser.phoneNumber}`,
-                            type: 'ONE_OFF',
-                            status: 'ACTIVE',
-                            triggerType: 'TIME',
-                            scheduleJson: { runAt: runAt.toISOString() },
-                            targetJson: { userId: dbUser.id },
-                            conditionsJson: {
-                                requireLgpd: true,
-                                skipGroups: true,
-                                sendWindow: { start: '08:00', end: '18:00' },
-                                excludeEnrollmentStatuses: ['ENROLLED', 'CANCELLED'],
-                            },
-                            actionJson: {
-                                messageTemplate: args.messageTemplate,
-                                internalNote: `[AUTOMACAO INTERNA] Follow-up criado pelo agente. Motivo: ${args.reason}`,
-                            },
-                            limitsJson: { cooldownHours: 0 },
-                            requiresApproval: false,
-                            nextRunAt: runAt,
-                        },
-                    });
-                    toolResult = { ok: true, runAt: runAt.toISOString(), message: 'Follow-up criado.' };
+                    toolResult = { ok: true, runAt: created.runAt, message: 'Follow-up criado.' };
                 }
 
             } else if (name === "cancel_asaas_payment") {
@@ -498,6 +607,24 @@ Instrucao: ${input.prompt}
      */
     async generateResponse(userPhone: string, history: any[], message: string, systemInstruction: string, state: string = 'GREETING', tenantId?: string): Promise<{ text: string; paymentUrl?: string; trace?: { toolsUsed: string[]; state: string; modelId: string } }> {
         try {
+            const relativeFollowUp = parseRelativeFollowUp(String(message));
+            if (relativeFollowUp) {
+                const created = await this.createLeadFollowUp(
+                    userPhone,
+                    tenantId,
+                    relativeFollowUp.runAt,
+                    'Oi {{firstName}}! Passando para te chamar como combinado. Podemos continuar por aqui?',
+                    relativeFollowUp.reason,
+                );
+
+                if (created.ok) {
+                    return {
+                        text: `Combinado, vou te chamar ${relativeFollowUp.label}. Até já!`,
+                        trace: { toolsUsed: ['create_follow_up'], state, modelId: 'deterministic-follow-up' },
+                    };
+                }
+            }
+
             const genAI = await this.getGenAI(tenantId);
 
             // Filter tools based on current conversation state

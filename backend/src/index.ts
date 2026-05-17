@@ -8,7 +8,7 @@ import { login, refresh, register } from './controllers/AuthController';
 import { requireAuth } from './middlewares/auth';
 import { createInstance, getQRCode, getStatus, disconnectInstance, configureWebhook, getWebhookStatus, getOwnerPhone } from './controllers/InstanceController';
 import { evolutionWebhook } from './controllers/EvolutionWebhookController';
-import { listLeads, getLead, listConversations, updateLeadState, updateLead, deleteLead, sendMessage, backfillNames, clearSession } from './controllers/LeadsController';
+import { listLeads, getLead, listConversations, updateLeadState, updateLead, deleteLead, sendMessage, sendMediaMessage, backfillNames, clearSession } from './controllers/LeadsController';
 import { getMetrics } from './controllers/MetricsController';
 import { getAgent, updatePersona, updatePrograms, updateSettings, toggleAgent } from './controllers/AgentController';
 import { getTenant, updateTenantKeys } from './controllers/TenantController';
@@ -48,8 +48,8 @@ if (!process.env.RESPONDI_WEBHOOK_SECRET) {
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+app.use(bodyParser.json({ limit: '100mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '100mb' }));
 
 function sanitizeDevLog(value: unknown): unknown {
     if (!value || typeof value !== 'object') return value;
@@ -121,7 +121,8 @@ app.post('/api/leads/backfill-names',  requireAuth as any, backfillNames as any)
 app.post('/api/leads/:id/clear-session', requireAuth as any, clearSession as any);
 app.patch('/api/leads/:id',          requireAuth as any, updateLead as any);
 app.patch('/api/leads/:id/state',    requireAuth as any, updateLeadState as any);
-app.post('/api/leads/:id/send',      requireAuth as any, sendMessage as any);
+app.post('/api/leads/:id/send',       requireAuth as any, sendMessage      as any);
+app.post('/api/leads/:id/send-media', requireAuth as any, sendMediaMessage as any);
 app.delete('/api/leads/:id',         requireAuth as any, deleteLead as any);
 
 // Métricas
