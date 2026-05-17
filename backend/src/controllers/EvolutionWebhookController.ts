@@ -183,20 +183,32 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
         await prisma.user.update({ where: { id: user.id }, data: { lastInteraction: new Date(), interactionCount: { increment: 1 } } });
         const role = (data as any)?.key?.fromMe ? 'operator' : 'user';
 
-        // Build media record — store message key so backend can fetch base64 on demand
-        const mediaRecord = hasMedia ? {
-            type: mediaType,
-            messageKey: (data as any)?.key ?? {},
-            messageData: data,   // full Evolution payload for re-fetch
-            ...mediaMeta,
-        } : undefined;
+        // Build media record — store message key so backend can fetch base64 on demand.
+        // senderName (pushName) is always persisted for group messages, regardless of
+        // whether the message carries media or is plain text.
+        const senderNameMeta = (isGroup && pushName) ? { senderName: pushName } : {};
+
+        // For messages with media: full record + senderName merged in.
+        // For plain-text group messages: only { senderName } stored in the media column.
+        // For non-group / no pushName: media column stays null.
+        const mediaJson: Record<string, unknown> | undefined = hasMedia
+            ? {
+                type: mediaType,
+                messageKey: (data as any)?.key ?? {},
+                messageData: data,   // full Evolution payload for re-fetch
+                ...mediaMeta,
+                ...senderNameMeta,
+              }
+            : Object.keys(senderNameMeta).length > 0
+                ? senderNameMeta          // plain-text group msg: just { senderName }
+                : undefined;
 
         const savedMsg = await prisma.chatHistory.create({
             data: {
                 userId: user.id,
                 role,
                 content: messageText,
-                ...(mediaRecord ? { media: mediaRecord as any } : {}),
+                ...(mediaJson ? { media: mediaJson as any } : {}),
             },
         });
         const savedChatHistoryId = savedMsg.id;
@@ -273,7 +285,7 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
                                 // Enviar transcrição ao dono antes da resposta
                                 await EvolutionService.sendText(tenant.evolutionInstance!, phoneNumber, `📝 *Transcrição do áudio:*\n_"${transcription}"_`);
                                 // Salvar transcrição no registro do áudio
-                                await prisma.chatHistory.update({ where: { id: savedChatHistoryId }, data: { media: { ...(mediaRecord as any), transcription } } }).catch(() => {});
+                                await prisma.chatHistory.update({ where: { id: savedChatHistoryId }, data: { media: { ...(mediaJson as any), transcription } } }).catch(() => {});
                             }
                         }
                     }
@@ -337,7 +349,7 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
                         // Salvar transcrição no campo media do registro de áudio
                         await prisma.chatHistory.update({
                             where: { id: savedChatHistoryId },
-                            data: { media: { ...(mediaRecord as any), transcription } },
+                            data: { media: { ...(mediaJson as any), transcription } },
                         }).catch(() => {});
                         log.webhook('info', 'Áudio transcrito', { chars: transcription.length, tenant: tenant.slug });
                     }

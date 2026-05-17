@@ -36,7 +36,36 @@ type LeadDetail = {
     messages: { id: string; role: string; content: string; createdAt: string; trace?: { toolsUsed: string[]; state: string; modelId: string; programsInjected?: { key: string; name: string; price: number }[]; ragUsed?: { chars: number; snippet: string } | null; audioTranscription?: string } | null; media?: MediaMeta | null }[];
 };
 
-// ─── Mock data (used when no real conversations exist) ────────────────────────
+// Campo senderName salvo pelo backend no JSON `media` de mensagens de grupo.
+// Funciona tanto para msgs com mídia quanto para texto puro (onde `media` é { senderName }).
+function extractGroupSender(msg: LeadDetail['messages'][number]): string | null {
+    // 1️⃣ Campo direto salvo pelo backend (v2) — mais confiável
+    const direct = (msg.media as any)?.senderName;
+    if (direct && typeof direct === 'string' && direct.trim()) return direct.trim();
+
+    // 2️⃣ Fallback: pushName embutido nos dados completos da Evolution (msgs com mídia)
+    const mediaSender =
+        (msg.media as any)?.messageData?.pushName ??
+        (msg.media as any)?.messageData?.key?.pushName ??
+        null;
+    if (mediaSender && typeof mediaSender === 'string' && mediaSender.trim()) {
+        return mediaSender.trim();
+    }
+
+    // 3️⃣ Fallback legado: prefixo no texto "Nome: mensagem" (raro na prática)
+    const m = msg.content.match(/^([^:\n]{2,60}):\s+/);
+    if (m?.[1]) return m[1].trim();
+
+    return null;
+}
+
+// Gera uma cor HSL determinística por nome (hash simples) para diferenciar membros do grupo
+function senderColor(name: string): string {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+    const hue = hash % 360;
+    return `hsl(${hue}, 60%, 55%)`;
+}
 
 // ─── State machine metadata ───────────────────────────────────────────────────
 
@@ -794,6 +823,8 @@ export function Conversas() {
 
                                 const hasTrace = isAgent && msg.trace;
                                 const isOrientador = msg.trace?.state === 'ORIENTADOR';
+                                const isGroupUserMsg = detail.isGroup && msg.role === 'user';
+                                const groupSender = isGroupUserMsg ? extractGroupSender(msg) : null;
 
                                 return (
                                     <div key={msg.id} style={{ display: 'flex', flexDirection: isRight ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8, marginBottom: 4 }}>
@@ -814,7 +845,20 @@ export function Conversas() {
                                             }}
                                             title={hasTrace ? 'Clique para ver trace' : undefined}
                                         >
-                                            {msg.media ? (
+                                            {isGroupUserMsg && (
+                                                <div style={{
+                                                    fontFamily: "'Geist Mono', monospace",
+                                                    fontSize: 9.5,
+                                                    letterSpacing: .5,
+                                                    textTransform: 'uppercase',
+                                                    color: groupSender ? senderColor(groupSender) : 'var(--ink-5)',
+                                                    fontWeight: groupSender ? 700 : 400,
+                                                    marginBottom: 6,
+                                                }}>
+                                                    {groupSender ?? 'membro do grupo'}
+                                                </div>
+                                            )}
+                                            {msg.media && (msg.media as any).type ? (
                                                 <MediaBubble messageId={msg.id} media={msg.media} isAgent={isAgent} />
                                             ) : isUrl ? (
                                                 <a href={msg.content} target="_blank" rel="noreferrer" style={{ fontFamily: "'Geist Mono', monospace", fontSize: 12, color: 'var(--accent-ink)', wordBreak: 'break-all', textDecoration: 'underline' }}>
