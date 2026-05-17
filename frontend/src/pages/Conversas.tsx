@@ -33,7 +33,7 @@ type LeadDetail = {
     lgpdConsent: boolean;
     asaasCustomerId?: string | null;
     lastPaymentUrl?: string | null;
-    messages: { id: string; role: string; content: string; createdAt: string; trace?: { toolsUsed: string[]; state: string; modelId: string; programsInjected?: { key: string; name: string; price: number }[]; ragUsed?: { chars: number; snippet: string } | null } | null; media?: MediaMeta | null }[];
+    messages: { id: string; role: string; content: string; createdAt: string; trace?: { toolsUsed: string[]; state: string; modelId: string; programsInjected?: { key: string; name: string; price: number }[]; ragUsed?: { chars: number; snippet: string } | null; audioTranscription?: string } | null; media?: MediaMeta | null }[];
 };
 
 // ─── Mock data (used when no real conversations exist) ────────────────────────
@@ -292,7 +292,7 @@ const TOOL_META: Record<string, { label: string; icon: string; color: string }> 
     admin_update_asaas_payment:        { label: 'Atualizar cobrança Asaas', icon: '✏️', color: 'var(--purple)' },
 };
 
-type TraceData = { toolsUsed: string[]; state: string; modelId: string; programsInjected?: { key: string; name: string; price: number }[]; ragUsed?: { chars: number; snippet: string } | null };
+type TraceData = { toolsUsed: string[]; state: string; modelId: string; programsInjected?: { key: string; name: string; price: number }[]; ragUsed?: { chars: number; snippet: string } | null; audioTranscription?: string };
 
 function TraceModal({ trace, onClose }: { trace: TraceData; onClose: () => void }) {
     return (
@@ -413,6 +413,26 @@ function TraceModal({ trace, onClose }: { trace: TraceData; onClose: () => void 
                         </div>
                     )}
                 </div>
+
+                {/* Transcrição de áudio — visível apenas se o input veio de PTT/voice note */}
+                {trace.audioTranscription && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{
+                            fontFamily: "'Geist Mono', monospace", fontSize: 10,
+                            color: 'var(--ink-4)', textTransform: 'uppercase', letterSpacing: 0.5,
+                        }}>
+                            Transcrição do áudio (input)
+                        </div>
+                        <div style={{
+                            padding: '10px 14px', borderRadius: 10,
+                            background: 'var(--accent-soft)', border: '1px solid var(--accent)',
+                            fontSize: 13, color: 'var(--ink-1)', fontStyle: 'italic', lineHeight: 1.6,
+                            whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                        }}>
+                            "{trace.audioTranscription}"
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

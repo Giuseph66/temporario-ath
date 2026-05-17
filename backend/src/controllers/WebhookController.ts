@@ -51,7 +51,7 @@ const debounceBuffer = new Map<string, BufferEntry>();
 
 const DEBOUNCE_MS = 5000; // 5 seconds of silence before processing
 
-export function scheduleProcessing(from: string, text: string, tenantId?: string, agentId?: string, messageAlreadySaved = false, simulatorMode = false): void {
+export function scheduleProcessing(from: string, text: string, tenantId?: string, agentId?: string, messageAlreadySaved = false, simulatorMode = false, audioTranscription?: string): void {
     const existing = debounceBuffer.get(from);
 
     if (existing) {
@@ -67,7 +67,7 @@ export function scheduleProcessing(from: string, text: string, tenantId?: string
         debounceBuffer.delete(from);
         const aggregatedText = entry.texts.join('\n');
         console.log(`⏱️  Debounce expirou para ${from}. Processando ${entry.texts.length} mensagem(ns) agregada(s).`);
-        processMessages(from, aggregatedText, tenantId, agentId, messageAlreadySaved, simulatorMode);
+        processMessages(from, aggregatedText, tenantId, agentId, messageAlreadySaved, simulatorMode, audioTranscription);
     }, DEBOUNCE_MS);
 }
 
@@ -148,7 +148,7 @@ async function handleHumanHandoff(
 // --- BACKGROUND PROCESSOR ---
 // Runs fully independently of the HTTP request. All DB, AI, and WhatsApp
 // calls happen here, long after the 200 OK has already been sent.
-async function processMessages(from: string, messageBody: string, tenantId?: string, agentId?: string, messageAlreadySaved = false, simulatorMode = false): Promise<void> {
+async function processMessages(from: string, messageBody: string, tenantId?: string, agentId?: string, messageAlreadySaved = false, simulatorMode = false, audioTranscription?: string): Promise<void> {
     try {
         // ── 0. Guarda isActive — revalida no momento da execução (pode ter mudado durante debounce) ──
         if (tenantId) {
@@ -369,6 +369,9 @@ async function processMessages(from: string, messageBody: string, tenantId?: str
                 chars: ragContext.length,
                 snippet: ragContext.slice(0, 300),
             } : null;
+            if (audioTranscription) {
+                (aiTrace as any).audioTranscription = audioTranscription;
+            }
         }
         await stateService.addToHistory(from, 'model', respostaIA, aiTrace);
 

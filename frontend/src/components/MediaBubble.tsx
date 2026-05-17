@@ -31,6 +31,8 @@ export type MediaMeta = {
     // contact
     displayName?: string;
     vcard?: string;
+    // transcription (áudio → Gemini)
+    transcription?: string;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -443,6 +445,24 @@ function AudioMedia({ messageId, media, textColor, isAgent }: { messageId: strin
                 </div>
             )}
             {state === 'error' && <ErrorMsg text="Falha ao carregar áudio" onRetry={retry} />}
+
+            {/* Transcrição gerada pelo Gemini */}
+            {media.transcription && (
+                <div style={{
+                    marginTop: 8, padding: '6px 10px',
+                    background: 'var(--paper-2)', borderRadius: 6,
+                    border: '1px solid var(--line)', maxWidth: 280,
+                }}>
+                    <span style={{
+                        fontFamily: "'Geist Mono', monospace", fontSize: 9,
+                        color: 'var(--ink-5)', textTransform: 'uppercase',
+                        letterSpacing: 0.5, display: 'block', marginBottom: 3,
+                    }}>Transcrição</span>
+                    <span style={{ fontSize: 11, color: 'var(--ink-3)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                        "{media.transcription}"
+                    </span>
+                </div>
+            )}
         </div>
     );
 }

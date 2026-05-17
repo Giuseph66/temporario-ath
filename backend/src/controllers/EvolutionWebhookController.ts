@@ -4,6 +4,7 @@ import { normalizeBrazilianPhone } from '../utils/phoneNormalizer';
 import { log } from '../services/LogService';
 import { handleAdminMessageWithTrace } from '../services/AdminChatService';
 import { EvolutionService } from '../services/EvolutionService';
+import { transcribeAudio } from '../services/TranscriptionService';
 
 function phoneVariants(phone: string): string[] {
     const digits = phone.replace(/\D/g, '');
@@ -74,13 +75,13 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
 
         const msg = (data as any)?.message ?? {};
 
-        const messageText: string =
+        let messageText: string =
             msg.conversation ??
             msg.extendedTextMessage?.text ??
             msg.imageMessage?.caption ??
             msg.videoMessage?.caption ??
             msg.documentMessage?.caption ??
-            msg.documentWithCaptionMessage?.message?.documentMessage?.caption ??
+            msg.documentWithCaptionMessage?.message?.documentDocument?.caption ??
             '';
 
         // Detect media type
@@ -190,7 +191,7 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
             ...mediaMeta,
         } : undefined;
 
-        await prisma.chatHistory.create({
+        const savedMsg = await prisma.chatHistory.create({
             data: {
                 userId: user.id,
                 role,
@@ -198,6 +199,7 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
                 ...(mediaRecord ? { media: mediaRecord as any } : {}),
             },
         });
+        const savedChatHistoryId = savedMsg.id;
 
         log.webhook('info', 'Mensagem salva', {
             tenant: tenant.slug,
@@ -252,7 +254,24 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
                             content: m.content,
                         }));
 
-                    const { text: reply, trace } = await handleAdminMessageWithTrace(tenant.id, messageText, history);
+                    // Para orientador: transcrever áudio se for o caso
+                    let orientadorText = messageText;
+                    if (mediaType === 'audio' && tenant.evolutionInstance) {
+                        const audioData = await EvolutionService.getMediaBase64(tenant.evolutionInstance, data).catch(() => null);
+                        if (audioData?.base64) {
+                            const audioMime = (mediaMeta as any)?.mimeType || 'audio/ogg; codecs=opus';
+                            const transcription = await transcribeAudio(audioData.base64, audioMime, tenant.id);
+                            if (transcription) {
+                                orientadorText = transcription;
+                                // Enviar transcrição ao dono antes da resposta
+                                await EvolutionService.sendText(tenant.evolutionInstance!, phoneNumber, `📝 *Transcrição do áudio:*\n_"${transcription}"_`);
+                                // Salvar transcrição no registro do áudio
+                                await prisma.chatHistory.update({ where: { id: savedChatHistoryId }, data: { media: { ...(mediaRecord as any), transcription } } }).catch(() => {});
+                            }
+                        }
+                    }
+
+                    const { text: reply, trace } = await handleAdminMessageWithTrace(tenant.id, orientadorText, history);
                     const whatsappReply = `*[🧭 ORIENTADOR]*\n${reply}`;
                     await prisma.chatHistory.create({ data: { userId: user.id, role: 'model', content: reply, trace: trace as any } });
                     await EvolutionService.sendText(tenant.evolutionInstance!, phoneNumber, whatsappReply);
@@ -289,10 +308,35 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
             }
         }
 
+        // ── TRANSCRIÇÃO DE ÁUDIO (só para contatos que passaram em todos os filtros) ──
+        let audioTranscription: string | undefined;
+        if (mediaType === 'audio' && tenant.evolutionInstance) {
+            try {
+                const audioData = await EvolutionService.getMediaBase64(tenant.evolutionInstance, data).catch(() => null);
+                if (audioData?.base64) {
+                    // mediaMeta.mimeType = MIME real (ex: 'audio/ogg'); audioData.mediaType = nome WhatsApp ('audioMessage')
+                    const audioMime = (mediaMeta as any)?.mimeType || 'audio/ogg; codecs=opus';
+                    const transcription = await transcribeAudio(audioData.base64, audioMime, tenant.id);
+                    if (transcription) {
+                        audioTranscription = transcription;
+                        messageText = transcription;
+                        // Salvar transcrição no campo media do registro de áudio
+                        await prisma.chatHistory.update({
+                            where: { id: savedChatHistoryId },
+                            data: { media: { ...(mediaRecord as any), transcription } },
+                        }).catch(() => {});
+                        log.webhook('info', 'Áudio transcrito', { chars: transcription.length, tenant: tenant.slug });
+                    }
+                }
+            } catch (err) {
+                log.webhook('warn', 'Falha ao transcrever áudio', { error: String(err) });
+            }
+        }
+
         // ── DISPARA PROCESSAMENTO (IA responde) — mensagem já salva ──────────
         const { scheduleProcessing } = await import('./WebhookController');
         await Promise.race([
-            Promise.resolve(scheduleProcessing(phoneNumber, messageText, tenant.id, agent?.id ?? undefined, true)),
+            Promise.resolve(scheduleProcessing(phoneNumber, messageText, tenant.id, agent?.id ?? undefined, true, false, audioTranscription)),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 120_000)),
         ]).catch(err => {
             log.webhook('error', 'Erro no processamento', { tenant: tenant.slug, error: err instanceof Error ? err.message : String(err) });
