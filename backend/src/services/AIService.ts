@@ -4,6 +4,8 @@ import { calendarService } from "./CalendarService";
 import { asaasService, asaasServiceForTenant } from "./AsaasService";
 import { WhatsAppService } from "./WhatsAppService";
 import { prisma } from '../utils/prisma';
+import { recordError, recordUsage } from './GeminiUsageService';
+import { getTenantUsageState } from './GeminiBudgetService';
 
 dotenv.config();
 
@@ -267,6 +269,10 @@ export class AIService {
         tenantId: string,
         input: { prompt: string; lead: Record<string, unknown>; automationName: string }
     ): Promise<string> {
+        const usageState = await getTenantUsageState(tenantId);
+        if (!usageState.canUseGemini) {
+            throw new Error('Estou passando por uma instabilidade temporária. Nossa equipe foi notificada. Tente novamente em breve.');
+        }
         const genAI = await this.getGenAI(tenantId);
         const prompt = `
 Crie uma mensagem curta de WhatsApp em portugues do Brasil.
@@ -282,15 +288,34 @@ Instrucao: ${input.prompt}
 
         let lastError: unknown;
         for (const modelId of ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']) {
+            const startedAt = Date.now();
             try {
                 const model = genAI.getGenerativeModel({
                     model: modelId,
                     generationConfig: { temperature: 0.3, topP: 0.85 },
                 }, { timeout: 30_000 });
                 const result = await model.generateContent(prompt);
+                recordUsage({
+                    tenantId,
+                    source: 'automation',
+                    feature: 'automation_message',
+                    phase: modelId === 'gemini-2.5-flash' ? 'initial' : 'fallback',
+                    channel: 'whatsapp',
+                    model: modelId,
+                    startedAt,
+                }, result, { status: 'SUCCESS' }).catch(() => {});
                 const text = result.response.text().replace(/\*\*/g, '*').trim();
                 if (text) return text;
             } catch (error) {
+                recordError({
+                    tenantId,
+                    source: 'automation',
+                    feature: 'automation_message',
+                    phase: modelId === 'gemini-2.5-flash' ? 'initial' : 'fallback',
+                    channel: 'whatsapp',
+                    model: modelId,
+                    startedAt,
+                }, error).catch(() => {});
                 lastError = error;
             }
         }
@@ -607,6 +632,16 @@ Instrucao: ${input.prompt}
      */
     async generateResponse(userPhone: string, history: any[], message: string, systemInstruction: string, state: string = 'GREETING', tenantId?: string): Promise<{ text: string; paymentUrl?: string; trace?: { toolsUsed: string[]; state: string; modelId: string } }> {
         try {
+            if (tenantId) {
+                const usageState = await getTenantUsageState(tenantId);
+                if (!usageState.canUseGemini) {
+                    return {
+                        text: 'Estou passando por uma instabilidade temporária. Nossa equipe foi notificada. Tente novamente em breve.',
+                        trace: { toolsUsed: [], state, modelId: 'blocked_by_budget' },
+                    };
+                }
+            }
+
             const relativeFollowUp = parseRelativeFollowUp(String(message));
             if (relativeFollowUp) {
                 const created = await this.createLeadFollowUp(
@@ -665,7 +700,46 @@ Instrucao: ${input.prompt}
             }
 
             const chat = model.startChat({ history: validHistory });
-            let result = await chat.sendMessage(String(message));
+            const usageContextBase = tenantId ? {
+                tenantId,
+                source: 'lead_flow',
+                feature: 'lead_agent',
+                fsmState: state,
+                channel: 'whatsapp',
+                model: 'gemini-3.1-pro-preview',
+            } : null;
+            let usageAttempt = 0;
+
+            const sendTracked = async (payload: any, phase: string, requestMeta?: Record<string, unknown>) => {
+                const startedAt = Date.now();
+                usageAttempt += 1;
+                try {
+                    const response = await chat.sendMessage(payload);
+                    if (usageContextBase) {
+                        recordUsage({
+                            ...usageContextBase,
+                            phase,
+                            attempt: usageAttempt,
+                            startedAt,
+                            requestMeta,
+                        }, response, { status: 'SUCCESS' }).catch(() => {});
+                    }
+                    return response;
+                } catch (error) {
+                    if (usageContextBase) {
+                        recordError({
+                            ...usageContextBase,
+                            phase,
+                            attempt: usageAttempt,
+                            startedAt,
+                            requestMeta,
+                        }, error).catch(() => {});
+                    }
+                    throw error;
+                }
+            };
+
+            let result = await sendTracked(String(message), 'initial');
 
             // Captures the real payment URL so it can be sent by code (never by model text)
             let capturedPaymentUrl: string | undefined;
@@ -704,17 +778,20 @@ Instrucao: ${input.prompt}
                     functionResponses.push({ name, result: execResult.result });
                 }
 
-                result = await chat.sendMessage(
-                    functionResponses.map(fr => ({ functionResponse: { name: fr.name, response: { result: fr.result } } }))
+                result = await sendTracked(
+                    functionResponses.map(fr => ({ functionResponse: { name: fr.name, response: { result: fr.result } } })),
+                    'tool_response',
+                    { functionResponseNames: functionResponses.map(fr => fr.name) }
                 );
             }
 
             // Safety net: se create_appointment foi chamado em CLOSING mas generate_payment não foi
             if (state === 'CLOSING' && calledCreateAppointment && !calledGeneratePayment) {
                 console.warn('⚠️ Safety net: create_appointment sem generate_payment em CLOSING.');
-                result = await chat.sendMessage(
+                result = await sendTracked(
                     'ATENÇÃO: Você agendou a aula com create_appointment mas NÃO gerou o pagamento com generate_payment. ' +
-                    'Conforme as regras, ambas devem ser chamadas juntas. Chame generate_payment AGORA com os dados já coletados.'
+                    'Conforme as regras, ambas devem ser chamadas juntas. Chame generate_payment AGORA com os dados já coletados.',
+                    'safety_net_generate_payment'
                 );
 
                 let safetyNetAttempts = 0;
@@ -743,8 +820,10 @@ Instrucao: ${input.prompt}
                         functionResponses.push({ name, result: execResult.result });
                     }
 
-                    result = await chat.sendMessage(
-                        functionResponses.map(fr => ({ functionResponse: { name: fr.name, response: { result: fr.result } } }))
+                    result = await sendTracked(
+                        functionResponses.map(fr => ({ functionResponse: { name: fr.name, response: { result: fr.result } } })),
+                        'tool_response',
+                        { functionResponseNames: functionResponses.map(fr => fr.name) }
                     );
                     safetyNetAttempts++;
                 }
@@ -753,9 +832,10 @@ Instrucao: ${input.prompt}
             // Safety net reverso: se generate_payment foi chamado sem create_appointment
             if (state === 'CLOSING' && calledGeneratePayment && !calledCreateAppointment) {
                 console.warn('⚠️ Safety net: generate_payment sem create_appointment em CLOSING.');
-                result = await chat.sendMessage(
+                result = await sendTracked(
                     'ATENÇÃO: Você chamou generate_payment mas esqueceu de chamar create_appointment. ' +
-                    'Conforme as regras, você deve chamar create_appointment AGORA com os dados da aula.'
+                    'Conforme as regras, você deve chamar create_appointment AGORA com os dados da aula.',
+                    'safety_net_create_appointment'
                 );
 
                 let safetyNetAttempts = 0;
@@ -784,8 +864,10 @@ Instrucao: ${input.prompt}
                         functionResponses.push({ name, result: execResult.result });
                     }
 
-                    result = await chat.sendMessage(
-                        functionResponses.map(fr => ({ functionResponse: { name: fr.name, response: { result: fr.result } } }))
+                    result = await sendTracked(
+                        functionResponses.map(fr => ({ functionResponse: { name: fr.name, response: { result: fr.result } } })),
+                        'tool_response',
+                        { functionResponseNames: functionResponses.map(fr => fr.name) }
                     );
                     safetyNetAttempts++;
                 }
@@ -809,8 +891,9 @@ Instrucao: ${input.prompt}
                 const allParts = result.response.candidates?.[0]?.content?.parts ?? [];
                 console.warn(`⚠️ Gemini resposta vazia | finishReason=${finishReason} | parts=${allParts.length} | texts=${allParts.filter((p: any) => p.text).length}`);
                 try {
-                    const retryResult = await chat.sendMessage(
-                        'A resposta não conteve texto válido ou foi apenas texto de raciocínio interno. Responda ao usuário em Português agora repassando os dados do agendamento ou pagamento.'
+                    const retryResult = await sendTracked(
+                        'A resposta não conteve texto válido ou foi apenas texto de raciocínio interno. Responda ao usuário em Português agora repassando os dados do agendamento ou pagamento.',
+                        'retry_empty_response'
                     );
                     const retryParts = retryResult.response.candidates?.[0]?.content?.parts ?? [];
                     responseText = retryParts
@@ -839,6 +922,17 @@ Instrucao: ${input.prompt}
             };
 
         } catch (error: any) {
+            if (tenantId) {
+                recordError({
+                    tenantId,
+                    source: 'lead_flow',
+                    feature: 'lead_agent',
+                    phase: 'initial',
+                    fsmState: state,
+                    channel: 'whatsapp',
+                    model: 'gemini-3.1-pro-preview',
+                }, error).catch(() => {});
+            }
             const category = classifyError(error);
             console.error(`❌ Erro Crítico na API do Gemini [${category}]:`, {
                 name: error?.name,
@@ -858,6 +952,10 @@ Instrucao: ${input.prompt}
      */
     async extractProfileData(history: any[], tenantId?: string): Promise<any> {
         try {
+            if (tenantId) {
+                const usageState = await getTenantUsageState(tenantId);
+                if (!usageState.canUseGemini) return {};
+            }
             const genAI = await this.getGenAI(tenantId);
             const jsonModel = genAI.getGenerativeModel({
                 model: "gemini-2.5-flash",
@@ -878,12 +976,32 @@ Histórico:
 ${JSON.stringify(history)}
 `;
 
+            const startedAt = Date.now();
             const result = await jsonModel.generateContent(prompt);
+            if (tenantId) {
+                recordUsage({
+                    tenantId,
+                    source: 'lead_flow',
+                    feature: 'profile_extraction',
+                    phase: 'json_extraction',
+                    model: 'gemini-2.5-flash',
+                    startedAt,
+                }, result, { status: 'SUCCESS' }).catch(() => {});
+            }
             let textResponse = result.response.text();
             textResponse = textResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
             return JSON.parse(textResponse);
 
         } catch (error) {
+            if (tenantId) {
+                recordError({
+                    tenantId,
+                    source: 'lead_flow',
+                    feature: 'profile_extraction',
+                    phase: 'json_extraction',
+                    model: 'gemini-2.5-flash',
+                }, error).catch(() => {});
+            }
             console.error("Erro ao extrair perfil:", error);
             return {};
         }

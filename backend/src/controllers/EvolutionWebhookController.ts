@@ -260,7 +260,14 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
                         const audioData = await EvolutionService.getMediaBase64(tenant.evolutionInstance, data).catch(() => null);
                         if (audioData?.base64) {
                             const audioMime = (mediaMeta as any)?.mimeType || 'audio/ogg; codecs=opus';
-                            const transcription = await transcribeAudio(audioData.base64, audioMime, tenant.id);
+                            const transcription = await transcribeAudio(audioData.base64, audioMime, tenant.id, {
+                                userId: user.id,
+                                chatHistoryId: savedChatHistoryId,
+                                channel: 'whatsapp',
+                                source: 'admin_chat',
+                                feature: 'audio_transcription',
+                                durationSeconds: Number((mediaMeta as any)?.duration ?? 0),
+                            });
                             if (transcription) {
                                 orientadorText = transcription;
                                 // Enviar transcrição ao dono antes da resposta
@@ -316,7 +323,14 @@ export async function evolutionWebhook(req: Request, res: Response): Promise<voi
                 if (audioData?.base64) {
                     // mediaMeta.mimeType = MIME real (ex: 'audio/ogg'); audioData.mediaType = nome WhatsApp ('audioMessage')
                     const audioMime = (mediaMeta as any)?.mimeType || 'audio/ogg; codecs=opus';
-                    const transcription = await transcribeAudio(audioData.base64, audioMime, tenant.id);
+                    const transcription = await transcribeAudio(audioData.base64, audioMime, tenant.id, {
+                        userId: user.id,
+                        chatHistoryId: savedChatHistoryId,
+                        channel: 'whatsapp',
+                        source: 'whatsapp_audio',
+                        feature: 'audio_transcription',
+                        durationSeconds: Number((mediaMeta as any)?.duration ?? 0),
+                    });
                     if (transcription) {
                         audioTranscription = transcription;
                         messageText = transcription;

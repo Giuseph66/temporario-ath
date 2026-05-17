@@ -25,6 +25,24 @@ import { listSessions, getSession, createSession, updateSession, deleteSession }
 import { approveAutomation, createAutomation, getAutomation, listAutomations, pauseAutomation, resumeAutomation, runAutomation, updateAutomation } from './controllers/AutomationController';
 import { automationService } from './services/AutomationService';
 import { prisma } from './utils/prisma';
+import {
+    getAiUsageSummary,
+    getAiUsageTimeseries,
+    getAiUsageByModel,
+    getAiUsageByFeature,
+    getAiUsageByState,
+    getAiUsageByLead,
+    getAiUsageEvents,
+    getAiUsageBudget,
+    patchAiUsageBudget,
+    getAiUsageStatus,
+    getAiUsageModels,
+    postAiUsageModelsSync,
+    getAiUsagePrices,
+    postAiUsagePrices,
+    patchAiUsagePrice,
+    postAiUsagePriceSync,
+} from './controllers/AiUsageController';
 
 dotenv.config();
 
@@ -171,6 +189,24 @@ app.post('/api/automations/:id/pause',   requireAuth as any, pauseAutomation as 
 app.post('/api/automations/:id/resume',  requireAuth as any, resumeAutomation as any);
 app.post('/api/automations/:id/run',     requireAuth as any, runAutomation as any);
 app.post('/api/automations/:id/approve', requireAuth as any, approveAutomation as any);
+
+// AI Usage — Tracking Gemini
+app.get('/api/ai-usage/summary',      requireAuth as any, getAiUsageSummary as any);
+app.get('/api/ai-usage/timeseries',   requireAuth as any, getAiUsageTimeseries as any);
+app.get('/api/ai-usage/by-model',     requireAuth as any, getAiUsageByModel as any);
+app.get('/api/ai-usage/by-feature',   requireAuth as any, getAiUsageByFeature as any);
+app.get('/api/ai-usage/by-state',     requireAuth as any, getAiUsageByState as any);
+app.get('/api/ai-usage/by-lead',      requireAuth as any, getAiUsageByLead as any);
+app.get('/api/ai-usage/events',       requireAuth as any, getAiUsageEvents as any);
+app.get('/api/ai-usage/budget',       requireAuth as any, getAiUsageBudget as any);
+app.patch('/api/ai-usage/budget',     requireAuth as any, patchAiUsageBudget as any);
+app.get('/api/ai-usage/status',       requireAuth as any, getAiUsageStatus as any);
+app.get('/api/ai-usage/models',       requireAuth as any, getAiUsageModels as any);
+app.post('/api/ai-usage/models/sync', requireAuth as any, postAiUsageModelsSync as any);
+app.get('/api/ai-usage/prices',       requireAuth as any, getAiUsagePrices as any);
+app.post('/api/ai-usage/prices',      requireAuth as any, postAiUsagePrices as any);
+app.patch('/api/ai-usage/prices/:id', requireAuth as any, patchAiUsagePrice as any);
+app.post('/api/ai-usage/prices/sync', requireAuth as any, postAiUsagePriceSync as any);
 
 app.get('/api/agent',                requireAuth as any, getAgent as any);
 app.patch('/api/agent/persona',      requireAuth as any, updatePersona as any);

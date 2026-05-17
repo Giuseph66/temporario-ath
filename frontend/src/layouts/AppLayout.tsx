@@ -35,6 +35,7 @@ const BASE_CATEGORIES: NavCategory[] = [
     {
         label: 'Sistema',
         items: [
+            { to: '/consumo-ai',  label: 'Consumo IA' },
             { to: '/integracoes', label: 'Integrações' },
             { to: '/config',      label: 'Configurações' },
             { to: '/logs',        label: 'Logs' },

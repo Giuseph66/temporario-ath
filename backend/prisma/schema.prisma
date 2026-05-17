@@ -37,6 +37,9 @@ model Tenant {
   simulatorSessions   SimulatorSession[]
   automations         Automation[]
   automationRuns      AutomationRun[]
+  geminiUsageEvents   GeminiUsageEvent[]
+  geminiUsageBudget   GeminiUsageBudget?
+  geminiModelCatalog  GeminiModelCatalog[]
 }
 
 model TenantUser {
@@ -245,8 +248,168 @@ model User {
   agent            Agent?           @relation(fields: [agentId], references: [id])
   messages         ChatHistory[]
   automationTargets AutomationTargetRun[]
+  geminiUsageEvents GeminiUsageEvent[]
 
   @@unique([phoneNumber, tenantId])
+}
+
+model GeminiUsageEvent {
+  id                    String   @id @default(uuid())
+
+  tenantId              String
+  agentId               String?
+  userId                String?
+  chatHistoryId         String?
+
+  source                String
+  feature               String
+  phase                 String?
+  fsmState              String?
+  channel               String?
+
+  model                 String
+  modelVersion          String?
+  responseId            String?
+  attempt               Int      @default(1)
+
+  inputTokens           Int      @default(0)
+  outputTokens          Int      @default(0)
+  totalTokens           Int      @default(0)
+
+  thinkingTokens        Int      @default(0)
+  cachedTokens          Int      @default(0)
+  toolUsePromptTokens   Int      @default(0)
+
+  inputTextTokens       Int      @default(0)
+  inputAudioTokens      Int      @default(0)
+  inputImageTokens      Int      @default(0)
+  inputVideoTokens      Int      @default(0)
+  inputDocumentTokens   Int      @default(0)
+  inputEmbeddingTokens  Int      @default(0)
+
+  estimatedCostUsd      Decimal  @default(0) @db.Decimal(18, 8)
+  estimatedCostBrl      Decimal  @default(0) @db.Decimal(18, 8)
+  exchangeRateUsdBrl    Decimal? @db.Decimal(18, 8)
+
+  status                String   @default("SUCCESS")
+  errorCode             String?
+  errorMessage          String?  @db.Text
+  latencyMs             Int?
+
+  usageMetadataJson     Json?
+  priceSnapshotJson     Json?
+  requestMetaJson       Json?
+  toolsUsedJson         Json?
+  missingPricesJson     Json?
+
+  createdAt             DateTime @default(now())
+
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                  User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, model])
+  @@index([tenantId, feature])
+  @@index([tenantId, source])
+  @@index([tenantId, fsmState])
+  @@index([tenantId, status])
+  @@index([agentId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model GeminiModelCatalog {
+  id                    String   @id @default(uuid())
+
+  tenantId              String?
+  name                  String
+  displayName           String?
+  version               String?
+  description           String?  @db.Text
+
+  inputTokenLimit       Int?
+  outputTokenLimit      Int?
+  supportedMethodsJson  Json?
+
+  isAvailable           Boolean  @default(true)
+  isDeprecated          Boolean  @default(false)
+  isPreview             Boolean  @default(false)
+
+  rawJson               Json?
+  lastSyncedAt          DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  tenant                Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([name])
+}
+
+model GeminiPriceCatalog {
+  id                       String   @id @default(uuid())
+
+  model                    String
+  modality                 String
+  direction                String
+
+  pricePerMillion          Decimal  @db.Decimal(18, 8)
+  currency                 String   @default("USD")
+  unit                     String   @default("1M_TOKENS")
+
+  contextThreshold         Int?
+  thinkingIncludedInOutput Boolean  @default(true)
+
+  effectiveFrom            DateTime @default(now())
+  effectiveTo              DateTime?
+
+  isManual                 Boolean  @default(true)
+  isFallbackSeed           Boolean  @default(false)
+  isDeprecated             Boolean  @default(false)
+
+  note                     String?  @db.Text
+  sourceUrl                String?  @db.Text
+
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([model])
+  @@index([model, modality, direction])
+  @@index([effectiveFrom, effectiveTo])
+}
+
+model GeminiUsageBudget {
+  id                       String   @id @default(uuid())
+
+  tenantId                 String   @unique
+
+  monthlyLimitUsd          Decimal? @db.Decimal(18, 8)
+  monthlyLimitBrl          Decimal? @db.Decimal(18, 8)
+  fixedExchangeRateUsdBrl  Decimal? @db.Decimal(18, 8)
+
+  warning50Enabled         Boolean  @default(true)
+  warning80Enabled         Boolean  @default(true)
+  warning90Enabled         Boolean  @default(true)
+
+  hardLimitEnabled         Boolean  @default(false)
+  blockOnLimit             Boolean  @default(false)
+
+  preciseEmbeddingCount    Boolean  @default(false)
+
+  costCalculationMethod    String   @default("ESTIMATED")
+  alertEmail               String?
+  alertWhatsapp            String?
+
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  tenant                   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model GeminiPricingCache {
+  id        String   @id
+  data      String   @db.Text
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 // ─── Automações Contextuais ──────────────────────────────────────────────────

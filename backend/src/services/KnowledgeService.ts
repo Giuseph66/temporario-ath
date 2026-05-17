@@ -1,5 +1,6 @@
 import { prisma } from '../utils/prisma';
 import { embedText, cosineSimilarity } from './EmbeddingService';
+import { recordError, recordUsage } from './GeminiUsageService';
 
 const CHUNK_SIZE = 800;
 const CHUNK_OVERLAP = 120;
@@ -160,7 +161,10 @@ async function extractFileTextWithGemini(
 
     let raw = '';
     let lastError = '';
-    for (const candidate of buildModelCandidates(model)) {
+    const modelCandidates = buildModelCandidates(model);
+    for (let attempt = 0; attempt < modelCandidates.length; attempt++) {
+        const candidate = modelCandidates[attempt];
+        const startedAt = Date.now();
         const res = await fetch(`${GEMINI_BASE}/models/${candidate}:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -180,9 +184,72 @@ async function extractFileTextWithGemini(
         });
 
         raw = await res.text();
-        if (res.ok) break;
+        if (res.ok) {
+            try {
+                const parsedOk = JSON.parse(raw);
+                recordUsage({
+                    tenantId,
+                    source: 'knowledge',
+                    feature: 'rag_file_extraction',
+                    phase: attempt === 0 ? 'initial' : 'fallback',
+                    channel: 'dashboard',
+                    model: candidate,
+                    attempt: attempt + 1,
+                    startedAt,
+                    requestMeta: {
+                        title,
+                        mimeType,
+                        base64Length: base64Data.length,
+                        approximateBytes: Math.floor((base64Data.length * 3) / 4),
+                        httpStatus: res.status,
+                        modelAttempt: attempt + 1,
+                        maxOutputTokens: 8192,
+                    },
+                }, parsedOk, { status: 'SUCCESS' }).catch(() => {});
+            } catch {
+                recordError({
+                    tenantId,
+                    source: 'knowledge',
+                    feature: 'rag_file_extraction',
+                    phase: attempt === 0 ? 'initial' : 'fallback',
+                    channel: 'dashboard',
+                    model: candidate,
+                    attempt: attempt + 1,
+                    startedAt,
+                    requestMeta: {
+                        title,
+                        mimeType,
+                        base64Length: base64Data.length,
+                        approximateBytes: Math.floor((base64Data.length * 3) / 4),
+                        httpStatus: res.status,
+                        modelAttempt: attempt + 1,
+                        maxOutputTokens: 8192,
+                    },
+                }, new Error('Resposta JSON inválida na extração de arquivo')).catch(() => {});
+            }
+            break;
+        }
 
         lastError = `Gemini falhou ao processar arquivo com ${candidate} (${res.status}): ${raw}`;
+        recordError({
+            tenantId,
+            source: 'knowledge',
+            feature: 'rag_file_extraction',
+            phase: attempt === 0 ? 'initial' : 'fallback',
+            channel: 'dashboard',
+            model: candidate,
+            attempt: attempt + 1,
+            startedAt,
+            requestMeta: {
+                title,
+                mimeType,
+                base64Length: base64Data.length,
+                approximateBytes: Math.floor((base64Data.length * 3) / 4),
+                httpStatus: res.status,
+                modelAttempt: attempt + 1,
+                maxOutputTokens: 8192,
+            },
+        }, new Error(lastError)).catch(() => {});
         if (![400, 404].includes(res.status)) {
             throw new Error(lastError);
         }

@@ -3,6 +3,7 @@ import { prisma } from '../utils/prisma';
 import { log } from './LogService';
 import { googleCalendarIntegrationService } from './GoogleCalendarIntegrationService';
 import { asaasServiceForTenant } from './AsaasService';
+import { recordError, recordUsage } from './GeminiUsageService';
 
 async function resolveGeminiKey(tenantId: string): Promise<string> {
     if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
@@ -695,7 +696,45 @@ export async function handleAdminMessageWithTrace(tenantId: string, message: str
             history: cleanHistory,
         });
 
-        let result = await chat.sendMessage(message);
+        let usageAttempt = 0;
+        const sendTracked = async (payload: any, phase: 'initial' | 'tool_response', requestMeta?: Record<string, unknown>) => {
+            const startedAt = Date.now();
+            usageAttempt += 1;
+            try {
+                const response = await chat.sendMessage(payload);
+                recordUsage({
+                    tenantId,
+                    source: 'admin_chat',
+                    feature: 'admin_orientador',
+                    phase,
+                    fsmState: 'ORIENTADOR',
+                    channel: 'whatsapp',
+                    model: MODEL,
+                    toolsUsed,
+                    attempt: usageAttempt,
+                    requestMeta,
+                    startedAt,
+                }, response, { status: 'SUCCESS' }).catch(() => {});
+                return response;
+            } catch (error) {
+                recordError({
+                    tenantId,
+                    source: 'admin_chat',
+                    feature: 'admin_orientador',
+                    phase,
+                    fsmState: 'ORIENTADOR',
+                    channel: 'whatsapp',
+                    model: MODEL,
+                    toolsUsed,
+                    attempt: usageAttempt,
+                    requestMeta,
+                    startedAt,
+                }, error).catch(() => {});
+                throw error;
+            }
+        };
+
+        let result = await sendTracked(message, 'initial');
         const loopStart = Date.now();
 
         while (Date.now() - loopStart < 60_000) {
@@ -715,8 +754,10 @@ export async function handleAdminMessageWithTrace(tenantId: string, message: str
                 }
             }
 
-            result = await chat.sendMessage(
-                functionResponses.map(fr => ({ functionResponse: { name: fr.name, response: { result: fr.result } } }))
+            result = await sendTracked(
+                functionResponses.map(fr => ({ functionResponse: { name: fr.name, response: { result: fr.result } } })),
+                'tool_response',
+                { functionResponseNames: functionResponses.map(fr => fr.name) }
             );
         }
 

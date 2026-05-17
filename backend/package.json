@@ -10,7 +10,8 @@
         "test": "vitest run",
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",
-        "seed": "ts-node prisma/seed.ts"
+        "seed": "ts-node prisma/seed.ts",
+        "seed:prices": "npx ts-node prisma/seeds/geminiPrices.seed.ts"
     },
     "keywords": [],
     "author": "",

@@ -633,6 +633,207 @@ function BotIcon({ size = 20 }: { size?: number }) {
     );
 }
 
+function GeminiIcon({ size = 20 }: { size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3l2.6 5.4L20 11l-5.4 2.6L12 19l-2.6-5.4L4 11l5.4-2.6L12 3z" />
+            <circle cx="12" cy="11" r="1.5" />
+        </svg>
+    );
+}
+
+function GeminiPanel() {
+    const qc = useQueryClient();
+    const [feedback, setFeedback] = useState<string | null>(null);
+    const [priceSyncFeedback, setPriceSyncFeedback] = useState<string | null>(null);
+
+    function formatPriceSyncResult(data: any, dryRun: boolean): string {
+        const header = dryRun ? 'Prévia de atualização de preços' : 'Atualização de preços concluída';
+        const summary = `parsed=${data?.parsedCount ?? 0} · criados=${data?.created ?? 0} · atualizados=${data?.updated ?? 0} · manuais preservados=${data?.skippedManual ?? 0} · sem mudança=${data?.unchanged ?? 0}`;
+        const errors = Array.isArray(data?.errors) && data.errors.length ? ` · erros: ${data.errors.join(' | ')}` : '';
+        return `${header}: ${summary}${errors}`;
+    }
+
+    const { data: tenant } = useQuery<{ keys?: { geminiApiKey: string | null } }>({
+        queryKey: ['tenant'],
+        queryFn: () => axios.get('/api/tenant').then(r => r.data),
+    });
+    const { data: modelData } = useQuery<{
+        currentAgentModel: string | null;
+        currentAgentModelAvailability: { available: boolean; isDeprecated: boolean; reason?: string } | null;
+        currentAgentModelHasPrice: boolean | null;
+        models: Array<{ id: string; name: string; hasPrice: boolean; isAvailable: boolean; isDeprecated: boolean; lastSyncedAt: string | null }>;
+    }>({
+        queryKey: ['ai-usage-models'],
+        queryFn: () => axios.get('/api/ai-usage/models').then(r => r.data),
+    });
+
+    const syncMutation = useMutation({
+        mutationFn: () => axios.post('/api/ai-usage/models/sync').then(r => r.data),
+        onSuccess: (data: any) => {
+            setFeedback(data?.errors?.length ? `Sync concluído com alertas: ${data.errors.join(' | ')}` : `Sync concluído. Modelos: ${data.count}`);
+            qc.invalidateQueries({ queryKey: ['ai-usage-models'] });
+        },
+        onError: (err) => {
+            const message = axios.isAxiosError(err) ? (err.response?.data as any)?.error : 'Falha ao sincronizar modelos.';
+            setFeedback(message ?? 'Falha ao sincronizar modelos.');
+        },
+    });
+    const testKeyMutation = useMutation({
+        mutationFn: () => axios.post('/api/ai-usage/models/sync').then(r => r.data),
+        onSuccess: (data: any) => {
+            if (data?.errors?.length) setFeedback(`Falha na chave: ${data.errors.join(' | ')}`);
+            else setFeedback('Chave Gemini válida para ListModels.');
+            qc.invalidateQueries({ queryKey: ['ai-usage-models'] });
+        },
+        onError: (err) => {
+            const message = axios.isAxiosError(err) ? (err.response?.data as any)?.error : 'Falha ao testar chave.';
+            setFeedback(message ?? 'Falha ao testar chave.');
+        },
+    });
+    const dryRunPricesMutation = useMutation({
+        mutationFn: () => axios.post('/api/ai-usage/prices/sync', { dryRun: true }).then(r => r.data),
+        onSuccess: (data: any) => {
+            setPriceSyncFeedback(formatPriceSyncResult(data, true));
+        },
+        onError: (err) => {
+            const message = axios.isAxiosError(err)
+                ? (err.response?.data as any)?.error ?? (err.response?.data as any)?.errors?.join?.(' | ')
+                : 'Falha ao ler pricing.md.txt.';
+            setPriceSyncFeedback(message ?? 'Falha ao ler pricing.md.txt.');
+        },
+    });
+    const applyPricesMutation = useMutation({
+        mutationFn: () => axios.post('/api/ai-usage/prices/sync', { dryRun: false }).then(r => r.data),
+        onSuccess: (data: any) => {
+            setPriceSyncFeedback(formatPriceSyncResult(data, false));
+            qc.invalidateQueries({ queryKey: ['ai-usage-models'] });
+        },
+        onError: (err) => {
+            const message = axios.isAxiosError(err)
+                ? (err.response?.data as any)?.error ?? (err.response?.data as any)?.errors?.join?.(' | ')
+                : 'Falha ao atualizar preços.';
+            setPriceSyncFeedback(message ?? 'Falha ao atualizar preços.');
+        },
+    });
+
+    const keyConfigured = Boolean(tenant?.keys?.geminiApiKey);
+    const totalModels = modelData?.models?.length ?? 0;
+    const deprecated = modelData?.models?.filter(m => m.isDeprecated).length ?? 0;
+    const withoutPrice = modelData?.models?.filter(m => !m.hasPrice).length ?? 0;
+    const lastSync = modelData?.models?.[0]?.lastSyncedAt
+        ? new Date(modelData.models[0].lastSyncedAt as string).toLocaleString('pt-BR')
+        : '—';
+
+    return (
+        <div>
+            <div style={{ marginBottom: 32 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+                    <div>
+                        <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 400, color: 'var(--ink-1)', letterSpacing: -.5, marginBottom: 8 }}>
+                            Gemini
+                        </h2>
+                        <p style={{ fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.6, maxWidth: 520 }}>
+                            Status da API key, sincronização de modelos disponíveis na chave do tenant e alertas de preço/disponibilidade.
+                        </p>
+                    </div>
+                    <StatusBadge ok={keyConfigured} />
+                </div>
+            </div>
+
+            <div style={{ border: '1px solid var(--line)', background: 'var(--paper)', borderRadius: 14, overflow: 'hidden', padding: '0 24px' }}>
+                <FieldRow label="API Key Gemini" hint="Configuração vem da área Tenant/Configurações.">
+                    <div style={{ fontSize: 13, color: keyConfigured ? 'var(--accent-ink)' : 'var(--danger)', fontWeight: 500 }}>
+                        {keyConfigured ? 'Configurada' : 'Não configurada'}
+                    </div>
+                </FieldRow>
+                <FieldRow label="Modelos sincronizados" hint="Catálogo retornado por ListModels da chave do tenant.">
+                    <div style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500 }}>{totalModels}</div>
+                </FieldRow>
+                <FieldRow label="Última sincronização" hint="Maior timestamp entre os modelos salvos.">
+                    <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>{lastSync}</div>
+                </FieldRow>
+                <FieldRow label="Alertas" hint="Visão rápida para manutenção de catálogo.">
+                    <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+                        <span style={{ color: deprecated > 0 ? 'var(--amber)' : 'var(--ink-3)' }}>{deprecated} deprecated</span>{' · '}
+                        <span style={{ color: withoutPrice > 0 ? 'var(--danger)' : 'var(--ink-3)' }}>{withoutPrice} sem preço</span>
+                    </div>
+                </FieldRow>
+                <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: '0 32px', padding: '20px 0', alignItems: 'start' }}>
+                    <div>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-1)', marginBottom: 3 }}>Ações</div>
+                        <div style={{ fontSize: 12, color: 'var(--ink-4)', lineHeight: 1.5 }}>Teste/sync da chave e disponibilidade real de modelos.</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button onClick={() => testKeyMutation.mutate()} disabled={testKeyMutation.isPending} style={{...btnStyle, background: 'var(--paper-2)'}}>
+                            {testKeyMutation.isPending ? 'Testando…' : 'Testar chave'}
+                        </button>
+                        <button onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending} style={{...btnStyle, background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent-ink)'}}>
+                            {syncMutation.isPending ? 'Sincronizando…' : 'Sincronizar modelos'}
+                        </button>
+                    </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: '0 32px', padding: '0 0 20px 0', alignItems: 'start' }}>
+                    <div>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-1)', marginBottom: 3 }}>Preços oficiais</div>
+                        <div style={{ fontSize: 12, color: 'var(--ink-4)', lineHeight: 1.5 }}>Lê <code>pricing.md.txt</code> da Gemini e sincroniza o catálogo interno.</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button
+                            onClick={() => dryRunPricesMutation.mutate()}
+                            disabled={dryRunPricesMutation.isPending || applyPricesMutation.isPending}
+                            style={{ ...btnStyle, background: 'var(--paper-2)' }}
+                        >
+                            {dryRunPricesMutation.isPending ? 'Lendo…' : 'Prévia de preços'}
+                        </button>
+                        <button
+                            onClick={() => applyPricesMutation.mutate()}
+                            disabled={applyPricesMutation.isPending || dryRunPricesMutation.isPending}
+                            style={{ ...btnStyle, background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent-ink)' }}
+                        >
+                            {applyPricesMutation.isPending ? 'Aplicando…' : 'Atualizar preços'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {modelData?.currentAgentModel && (
+                <div style={{
+                    marginTop: 14, padding: '12px 14px', borderRadius: 10,
+                    border: '1px solid var(--line)', background: 'var(--paper-2)', fontSize: 12, color: 'var(--ink-3)',
+                }}>
+                    Modelo atual do agente: <strong>{modelData.currentAgentModel}</strong> · disponível: {modelData.currentAgentModelAvailability?.available ? 'sim' : 'não'} · deprecated: {modelData.currentAgentModelAvailability?.isDeprecated ? 'sim' : 'não'}
+                    {modelData.currentAgentModelAvailability?.reason ? ` · ${modelData.currentAgentModelAvailability.reason}` : ''}
+                </div>
+            )}
+            {modelData?.currentAgentModel && modelData.currentAgentModelHasPrice === false && (
+                <div style={{
+                    marginTop: 10, padding: '10px 12px', borderRadius: 8,
+                    border: '1px solid #e8d2a3', background: 'var(--amber-soft)', color: 'var(--amber)', fontSize: 12,
+                }}>
+                    Alerta: modelo atual do agente não possui preço configurado no catálogo interno.
+                </div>
+            )}
+            {feedback && (
+                <div style={{
+                    marginTop: 12, padding: '10px 12px', borderRadius: 8,
+                    border: '1px solid var(--line)', background: 'var(--paper)', fontSize: 12, color: 'var(--ink-3)',
+                }}>
+                    {feedback}
+                </div>
+            )}
+            {priceSyncFeedback && (
+                <div style={{
+                    marginTop: 10, padding: '10px 12px', borderRadius: 8,
+                    border: '1px solid var(--line)', background: 'var(--paper)', fontSize: 12, color: 'var(--ink-3)',
+                }}>
+                    {priceSyncFeedback}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ─── Admin Chat Panel ─────────────────────────────────────────────────────────
 function AdminChatPanel() {
     const qc = useQueryClient();
@@ -787,6 +988,7 @@ function AdminChatPanel() {
 
 const TABS = [
     { id: 'asaas', label: 'Asaas', sub: 'Pagamentos', Icon: AsaasIcon },
+    { id: 'gemini', label: 'Gemini', sub: 'IA e Modelos', Icon: GeminiIcon },
     { id: 'calendar', label: 'Google Calendar', sub: 'Agendamentos', Icon: CalendarIcon },
     { id: 'admin', label: 'Agente Interno', sub: 'Fale com o bot', Icon: BotIcon },
 ] as const;
@@ -801,6 +1003,10 @@ export function Integracoes() {
         queryKey: ['integrations'],
         queryFn: () => axios.get('/api/integrations').then(r => r.data),
     });
+    const { data: tenant } = useQuery<{ keys?: { geminiApiKey: string | null } }>({
+        queryKey: ['tenant'],
+        queryFn: () => axios.get('/api/tenant').then(r => r.data),
+    });
 
     function patcher(provider: string) {
         return (fields: Record<string, string>) =>
@@ -810,6 +1016,7 @@ export function Integracoes() {
 
     const configuredMap: Record<TabId, boolean> = {
         asaas: integs?.asaas.configured ?? false,
+        gemini: Boolean(tenant?.keys?.geminiApiKey),
         calendar: integs?.calendar.connected ?? false,
         admin: false,
     };
@@ -879,6 +1086,8 @@ export function Integracoes() {
                     <AsaasPanel data={integs?.asaas} patch={patcher('asaas')} />
                 ) : active === 'calendar' ? (
                     <CalendarPanel data={integs?.calendar} />
+                ) : active === 'gemini' ? (
+                    <GeminiPanel />
                 ) : (
                     <AdminChatPanel />
                 )}

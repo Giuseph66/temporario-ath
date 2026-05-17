@@ -53,6 +53,14 @@ export function Dashboard() {
         queryKey: ['agent'],
         queryFn: () => axios.get('/api/agent').then(r => r.data),
     });
+    const { data: aiSummary } = useQuery({
+        queryKey: ['ai-usage-summary', 'month'],
+        queryFn: () => axios.get('/api/ai-usage/summary', { params: { period: 'month' } }).then(r => r.data),
+    });
+    const { data: aiStatus } = useQuery({
+        queryKey: ['ai-usage-status'],
+        queryFn: () => axios.get('/api/ai-usage/status').then(r => r.data),
+    });
 
     const toggleAgent = useMutation({
         mutationFn: () => axios.patch('/api/agent/toggle'),
@@ -95,6 +103,38 @@ export function Dashboard() {
                     value={`${metrics?.conversionRate ?? 0}%`}
                     sub={`${metrics?.paymentPending ?? 0} aguardando pagamento`}
                 />
+            </div>
+
+            <div style={{
+                background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 12, padding: 16, marginBottom: 20,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+            }}>
+                <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap' }}>
+                    <div>
+                        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'var(--ink-5)', textTransform: 'uppercase' }}>IA mês</div>
+                        <div style={{ fontSize: 14, color: 'var(--ink-2)' }}>
+                            {(aiSummary?.totalCostBrl ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </div>
+                    </div>
+                    <div>
+                        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'var(--ink-5)', textTransform: 'uppercase' }}>Tokens</div>
+                        <div style={{ fontSize: 14, color: 'var(--ink-2)' }}>{(aiSummary?.totalTokens ?? 0).toLocaleString('pt-BR')}</div>
+                    </div>
+                    <div>
+                        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'var(--ink-5)', textTransform: 'uppercase' }}>Chamadas</div>
+                        <div style={{ fontSize: 14, color: 'var(--ink-2)' }}>{(aiSummary?.totalCalls ?? 0).toLocaleString('pt-BR')}</div>
+                    </div>
+                    <div>
+                        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'var(--ink-5)', textTransform: 'uppercase' }}>Status orçamento</div>
+                        <div style={{ fontSize: 14, color: 'var(--ink-2)' }}>{aiStatus?.state ?? 'OK'} ({(aiStatus?.usedPercent ?? 0).toFixed(1)}%)</div>
+                    </div>
+                </div>
+                <a href="/consumo-ai" style={{
+                    padding: '7px 12px', borderRadius: 8, border: '1px solid var(--line-2)', textDecoration: 'none',
+                    color: 'var(--ink-2)', fontSize: 12,
+                }}>
+                    Ver detalhes
+                </a>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16 }}>

@@ -18,6 +18,7 @@ import { Asaas } from './pages/Asaas';
 import { Simulador } from './pages/Simulador';
 import { Memorias } from './pages/Memorias';
 import { Automacoes } from './pages/Automacoes';
+import { ConsumoAI } from './pages/ConsumoAI';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
     const { accessToken } = useAuth();
@@ -43,6 +44,7 @@ function App() {
                         <Route path="agente"      element={<Agente />} />
                         <Route path="memorias"    element={<Memorias />} />
                         <Route path="automacoes"  element={<Automacoes />} />
+                        <Route path="consumo-ai"  element={<ConsumoAI />} />
                         <Route path="produtos"    element={<Produtos />} />
                         <Route path="config"      element={<Settings />} />
                         <Route path="logs"        element={<Logs />} />

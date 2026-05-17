@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '../utils/prisma';
+import { recordError, recordUsage } from './GeminiUsageService';
 
 // gemini-2.5-flash: suporte a áudio inline (OGG, MP3, WAV, FLAC, AAC)
 const TRANSCRIPTION_MODEL = 'gemini-2.5-flash';
@@ -15,7 +16,16 @@ export async function transcribeAudio(
     base64: string,
     mimeType: string,
     tenantId?: string,
+    context?: {
+        userId?: string;
+        chatHistoryId?: string;
+        channel?: string;
+        source?: string;
+        feature?: string;
+        durationSeconds?: number;
+    }
 ): Promise<string | null> {
+    const startedAt = Date.now();
     try {
         const resolvedMime = normalizeAudioMime(mimeType);
         // Tenant key → env fallback (padrão Artemis)
@@ -43,9 +53,48 @@ export async function transcribeAudio(
             ),
         ]);
 
+        if (tenantId) {
+            recordUsage({
+                tenantId,
+                userId: context?.userId,
+                chatHistoryId: context?.chatHistoryId,
+                source: context?.source ?? 'whatsapp_audio',
+                feature: context?.feature ?? 'audio_transcription',
+                phase: 'transcription',
+                channel: context?.channel ?? 'whatsapp',
+                model: TRANSCRIPTION_MODEL,
+                requestMeta: {
+                    mimeType: resolvedMime,
+                    base64Length: base64.length,
+                    approximateBytes: Math.floor((base64.length * 3) / 4),
+                    durationSeconds: context?.durationSeconds ?? null,
+                },
+                startedAt,
+            }, result, { status: 'SUCCESS' }).catch(() => {});
+        }
+
         const text = result.response.text().trim();
         return text.length > 0 ? text : null;
     } catch (e) {
+        if (tenantId) {
+            recordError({
+                tenantId,
+                userId: context?.userId,
+                chatHistoryId: context?.chatHistoryId,
+                source: context?.source ?? 'whatsapp_audio',
+                feature: context?.feature ?? 'audio_transcription',
+                phase: 'transcription',
+                channel: context?.channel ?? 'whatsapp',
+                model: TRANSCRIPTION_MODEL,
+                requestMeta: {
+                    mimeType: normalizeAudioMime(mimeType),
+                    base64Length: base64.length,
+                    approximateBytes: Math.floor((base64.length * 3) / 4),
+                    durationSeconds: context?.durationSeconds ?? null,
+                },
+                startedAt,
+            }, e).catch(() => {});
+        }
         console.error('[TranscriptionService] transcription failed:', e);
         return null;
     }
