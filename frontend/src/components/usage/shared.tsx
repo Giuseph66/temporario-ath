@@ -23,6 +23,15 @@ export function pct(n?: number | null) {
   return `${n.toFixed(1)}%`;
 }
 
+export function formatDateVisual(dateStr: string): string {
+  if (!dateStr) return dateStr;
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}`;
+  }
+  return dateStr;
+}
+
 export function sectionTitle(label: string) {
   return (
     <div style={{
@@ -216,7 +225,7 @@ export function DailyUsageChart({ rows, mode }: { rows: any[]; mode: ChartMode }
               </>
             ) : (
               <circle cx={point.x} cy={point.y} r="3.5" fill="var(--paper)" stroke="var(--accent-ink)" strokeWidth="2">
-                <title>{`${point.date}: ${formatMetricValue(point.value, mode)}`}</title>
+                <title>{`${formatDateVisual(point.date)}: ${formatMetricValue(point.value, mode)}`}</title>
               </circle>
             )}
           </g>
@@ -234,7 +243,7 @@ export function DailyUsageChart({ rows, mode }: { rows: any[]; mode: ChartMode }
               fontFamily="Geist Mono"
               textAnchor={index === 0 ? 'start' : index === points.length - 1 ? 'end' : 'middle'}
             >
-              {point.date}
+              {formatDateVisual(point.date)}
             </text>
           );
         })}
