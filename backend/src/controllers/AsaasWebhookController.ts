@@ -3,6 +3,7 @@ import { prisma } from '../utils/prisma';
 import { WhatsAppService } from '../services/WhatsAppService';
 import { EvolutionService } from '../services/EvolutionService';
 import { automationService } from '../services/AutomationService';
+import { updateSubscriptionStatus } from '../services/SubscriptionService';
 
 const whatsapp = new WhatsAppService();
 
@@ -55,6 +56,37 @@ export const handleAsaasWebhook = async (req: Request, res: Response): Promise<v
         const { event, payment } = req.body;
 
         console.log(`🔔 [AsaasWebhook] Evento recebido: ${event}`);
+
+        // Atualiza status de subscription da plataforma (cobrança da mensalidade do tenant)
+        const PLATFORM_SUBSCRIPTION_EVENTS: Record<string, string> = {
+            PAYMENT_RECEIVED: 'ACTIVE',
+            PAYMENT_CONFIRMED: 'ACTIVE',
+            PAYMENT_OVERDUE: 'OVERDUE',
+            PAYMENT_DELETED: 'CANCELLED',
+            SUBSCRIPTION_INACTIVATED: 'SUSPENDED',
+        };
+
+        if (event in PLATFORM_SUBSCRIPTION_EVENTS) {
+            const subStatus = PLATFORM_SUBSCRIPTION_EVENTS[event] as any;
+            // Tenta resolver tenant pelo asaasCustomerId da subscription
+            const platformSub = payment?.customer
+                ? await prisma.subscription.findFirst({
+                    where: { asaasCustomerId: payment.customer },
+                    select: { tenantId: true },
+                  }).catch(() => null)
+                : null;
+
+            if (platformSub) {
+                const nextPeriodEnd = event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED'
+                    ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                    : undefined;
+                await updateSubscriptionStatus(platformSub.tenantId, subStatus, {
+                    asaasCustomerId: payment.customer,
+                    ...(nextPeriodEnd ? { currentPeriodEnd: nextPeriodEnd } : {}),
+                });
+                console.log(`[AsaasWebhook] Subscription ${platformSub.tenantId} → ${subStatus}`);
+            }
+        }
 
         if (event !== 'PAYMENT_RECEIVED' && event !== 'PAYMENT_CONFIRMED') {
             console.log(`ℹ️  [AsaasWebhook] Evento ignorado: ${event}`);

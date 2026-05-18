@@ -19,10 +19,18 @@ import { Simulador } from './pages/Simulador';
 import { Memorias } from './pages/Memorias';
 import { Automacoes } from './pages/Automacoes';
 import { ConsumoAI } from './pages/ConsumoAI';
+import { Billing } from './pages/Billing';
+import { AdminLogin } from './pages/AdminLogin';
+import { AdminDashboard } from './pages/AdminDashboard';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
     const { accessToken } = useAuth();
     return accessToken ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+    const token = localStorage.getItem('adminAccessToken');
+    return token ? <>{children}</> : <Navigate to="/zeruela/login" replace />;
 }
 
 function App() {
@@ -50,7 +58,12 @@ function App() {
                         <Route path="logs"        element={<Logs />} />
                         <Route path="asaas"       element={<Asaas />} />
                         <Route path="simulador"   element={<Simulador />} />
+                        <Route path="assinatura"  element={<Billing />} />
                     </Route>
+                    {/* Admin routes — completely isolated from tenant app */}
+                    <Route path="/zeruela/login"     element={<AdminLogin />} />
+                    <Route path="/zeruela/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                    <Route path="/zeruela" element={<Navigate to="/zeruela/dashboard" replace />} />
                     <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>
             </BrowserRouter>

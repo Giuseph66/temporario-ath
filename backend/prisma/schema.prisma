@@ -31,6 +31,7 @@ model Tenant {
   users             User[]
   agents            Agent[]
   tenantUsers       TenantUser[]
+  subscription      Subscription?
   googleCalendarIntegrations UserGoogleCalendarIntegration[]
   knowledgeDocs       KnowledgeDocument[]
   contacts            Contact[]
@@ -40,6 +41,32 @@ model Tenant {
   geminiUsageEvents   GeminiUsageEvent[]
   geminiUsageBudget   GeminiUsageBudget?
   geminiModelCatalog  GeminiModelCatalog[]
+}
+
+model SuperAdmin {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  lastLoginAt  DateTime?
+}
+
+model Subscription {
+  id                  String    @id @default(uuid())
+  tenantId            String    @unique
+  status              String    @default("TRIAL") // TRIAL | ACTIVE | OVERDUE | SUSPENDED | CANCELLED
+  planName            String    @default("starter")
+  priceMonthly        Float     @default(0)
+  trialEndsAt         DateTime?
+  currentPeriodStart  DateTime  @default(now())
+  currentPeriodEnd    DateTime?
+  asaasCustomerId     String?
+  asaasSubscriptionId String?
+  cancelledAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model TenantUser {

@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { createTenant } from '../services/TenantService';
 import { log } from '../services/LogService';
+import { createTrialSubscription } from '../services/SubscriptionService';
 
 function signAccess(payload: { tenantId: string; userId: string }) {
     return jwt.sign(payload, process.env.JWT_ACCESS_SECRET!, {
@@ -18,8 +19,9 @@ function signRefresh(payload: { tenantId: string; userId: string }) {
 }
 
 export async function login(req: Request, res: Response): Promise<Response> {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'email e password obrigatórios' });
+    const { email: rawEmail, password } = req.body;
+    if (!rawEmail || !password) return res.status(400).json({ error: 'email e password obrigatórios' });
+    const email = rawEmail.toLowerCase().trim();
 
     const user = await prisma.tenantUser.findUnique({ where: { email } });
     if (!user) { log.auth('warn', 'Login falhou: email não encontrado', { email }); return res.status(401).json({ error: 'Credenciais inválidas' }); }
@@ -55,9 +57,10 @@ export async function refresh(req: Request, res: Response): Promise<Response> {
 }
 
 export async function register(req: Request, res: Response): Promise<Response> {
-    const { companyName, agentName, email, password } = req.body as {
+    const { companyName, agentName, email: rawEmail, password } = req.body as {
         companyName: string; agentName: string; email: string; password: string;
     };
+    const email = rawEmail?.toLowerCase().trim() ?? '';
 
     if (!companyName || !agentName || !email || !password) {
         return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
@@ -85,6 +88,10 @@ export async function register(req: Request, res: Response): Promise<Response> {
         const tenant = await createTenant({ companyName, slug, agentName, ownerEmail: email, ownerPassword: password });
         const user = await prisma.tenantUser.findUnique({ where: { email } });
         const payload = { tenantId: tenant.id, userId: user!.id };
+
+        await createTrialSubscription(tenant.id).catch(err =>
+            console.error('[Register] Falha ao criar trial subscription:', err)
+        );
 
         return res.status(201).json({
             accessToken: signAccess(payload),

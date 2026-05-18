@@ -6,7 +6,12 @@ import { handleAsaasWebhook } from './controllers/AsaasWebhookController';
 import { handleRespondiWebhook } from './controllers/RespondiController';
 import { login, refresh, register } from './controllers/AuthController';
 import { requireAuth, requireAuthSSE, AuthRequest } from './middlewares/auth';
+import { requireSuperAdmin } from './middlewares/superAdmin';
+import { requireActiveSubscription } from './middlewares/subscription';
 import { sseManager } from './services/SSEManager';
+import { adminLogin, adminRefresh, bootstrapAdmin } from './controllers/SuperAdminAuthController';
+import { listTenants, getTenantDetail, patchTenantSubscription, toggleTenantActive, impersonateTenant, getAdminMetrics, getTenantBilling } from './controllers/AdminController';
+import { checkTrialExpiry } from './services/SubscriptionService';
 import { createInstance, getQRCode, getStatus, disconnectInstance, configureWebhook, getWebhookStatus, getOwnerPhone } from './controllers/InstanceController';
 import { evolutionWebhook } from './controllers/EvolutionWebhookController';
 import { listLeads, getLead, listConversations, updateLeadState, updateLead, deleteLead, sendMessage, sendMediaMessage, backfillNames, clearSession } from './controllers/LeadsController';
@@ -131,6 +136,22 @@ app.get('/', (req, res) => res.send('🤖 Artemis PRO (Architecture Cleaned) Onl
 app.post('/auth/register', register);
 app.post('/auth/login', login);
 app.post('/auth/refresh', refresh);
+
+// SuperAdmin auth — prefixed under /api/admin to avoid Vite route conflict
+app.post('/api/zeruela/login', adminLogin as any);
+app.post('/api/zeruela/refresh', adminRefresh as any);
+app.post('/api/zeruela/bootstrap', bootstrapAdmin as any);
+
+// Admin API — protegida por requireSuperAdmin
+app.get('/api/zeruela/metrics',                      requireSuperAdmin, getAdminMetrics as any);
+app.get('/api/zeruela/tenants',                      requireSuperAdmin, listTenants as any);
+app.get('/api/zeruela/tenants/:id',                  requireSuperAdmin, getTenantDetail as any);
+app.patch('/api/zeruela/tenants/:id/subscription',   requireSuperAdmin, patchTenantSubscription as any);
+app.patch('/api/zeruela/tenants/:id/active',         requireSuperAdmin, toggleTenantActive as any);
+app.post('/api/zeruela/tenants/:id/impersonate',     requireSuperAdmin, impersonateTenant as any);
+
+// Tenant billing (tenant-facing, protegida por requireAuth)
+app.get('/api/billing',                        requireAuth as any, getTenantBilling as any);
 
 // SSE — real-time push para o frontend (substitui polling de conversas)
 app.get('/api/events', requireAuthSSE, (req, res) => {
@@ -285,6 +306,12 @@ const server = app.listen(port, () => {
     console.log(`🚀 Artemis PRO rodando perfeitamente na porta ${port}`);
     log.system('info', `Servidor iniciado na porta ${port}`, { port, env: process.env.NODE_ENV });
     automationService.start();
+
+    // Verifica trials expirados a cada hora
+    setInterval(() => {
+        checkTrialExpiry().catch(err => console.error('[TrialCron]', err));
+    }, 60 * 60 * 1000);
+    checkTrialExpiry().catch(() => {}); // run once on boot
 });
 
 async function shutdown(signal: string): Promise<void> {

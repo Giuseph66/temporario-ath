@@ -1,0 +1,206 @@
+import { Request, Response } from 'express';
+import { prisma } from '../utils/prisma';
+import * as jwt from 'jsonwebtoken';
+import { updateSubscriptionStatus, SubscriptionStatus } from '../services/SubscriptionService';
+
+// ── List all tenants with subscription + metrics ──────────────────────────────
+export async function listTenants(req: Request, res: Response): Promise<Response> {
+    const tenants = await prisma.tenant.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: {
+            id: true, name: true, slug: true, plan: true, isActive: true, createdAt: true,
+            subscription: {
+                select: { status: true, planName: true, priceMonthly: true, trialEndsAt: true, currentPeriodEnd: true, asaasCustomerId: true },
+            },
+            tenantUsers: { select: { email: true, role: true, lastLoginAt: true }, orderBy: { createdAt: 'asc' }, take: 1 },
+            _count: { select: { users: true, agents: true } },
+        },
+    });
+
+    return res.json(tenants);
+}
+
+// ── Get single tenant detail ──────────────────────────────────────────────────
+export async function getTenantDetail(req: Request, res: Response): Promise<Response> {
+    const { id } = req.params;
+
+    const tenant = await prisma.tenant.findUnique({
+        where: { id },
+        select: {
+            id: true, name: true, slug: true, plan: true, isActive: true,
+            evolutionInstance: true, createdAt: true,
+            subscription: true,
+            tenantUsers: { select: { id: true, email: true, role: true, lastLoginAt: true, createdAt: true } },
+            _count: { select: { users: true, agents: true } },
+        },
+    });
+
+    if (!tenant) return res.status(404).json({ error: 'Tenant não encontrado' });
+
+    // AI usage last 30 days
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const aiUsage = await prisma.geminiUsageEvent.aggregate({
+        where: { tenantId: id, createdAt: { gte: thirtyDaysAgo } },
+        _sum: { totalTokens: true, estimatedCostBrl: true },
+        _count: { id: true },
+    });
+
+    // Last 5 conversations
+    const recentLeads = await prisma.user.findMany({
+        where: { tenantId: id },
+        orderBy: { lastInteraction: 'desc' },
+        take: 5,
+        select: { id: true, name: true, phoneNumber: true, conversationState: true, lastInteraction: true, enrollmentStatus: true },
+    });
+
+    return res.json({
+        ...tenant,
+        aiUsage30d: {
+            tokens: aiUsage._sum.totalTokens ?? 0,
+            costBrl: Number(aiUsage._sum.estimatedCostBrl ?? 0).toFixed(2),
+            events: aiUsage._count.id,
+        },
+        recentLeads,
+    });
+}
+
+// ── Update tenant subscription ────────────────────────────────────────────────
+export async function patchTenantSubscription(req: Request, res: Response): Promise<Response> {
+    const { id } = req.params;
+    const { status, planName, priceMonthly, trialEndsAt, currentPeriodEnd, asaasCustomerId, asaasSubscriptionId } = req.body;
+
+    const tenant = await prisma.tenant.findUnique({ where: { id }, select: { id: true } });
+    if (!tenant) return res.status(404).json({ error: 'Tenant não encontrado' });
+
+    if (status) {
+        await updateSubscriptionStatus(id, status as SubscriptionStatus, {
+            asaasCustomerId,
+            asaasSubscriptionId,
+            currentPeriodEnd: currentPeriodEnd ? new Date(currentPeriodEnd) : undefined,
+        });
+    }
+
+    if (planName !== undefined || priceMonthly !== undefined || trialEndsAt !== undefined) {
+        await prisma.subscription.update({
+            where: { tenantId: id },
+            data: {
+                ...(planName !== undefined ? { planName } : {}),
+                ...(priceMonthly !== undefined ? { priceMonthly: Number(priceMonthly) } : {}),
+                ...(trialEndsAt !== undefined ? { trialEndsAt: new Date(trialEndsAt) } : {}),
+            },
+        });
+    }
+
+    const updated = await prisma.subscription.findUnique({ where: { tenantId: id } });
+    return res.json(updated);
+}
+
+// ── Toggle tenant active ──────────────────────────────────────────────────────
+export async function toggleTenantActive(req: Request, res: Response): Promise<Response> {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    if (typeof isActive !== 'boolean') return res.status(400).json({ error: 'isActive (boolean) obrigatório' });
+
+    const tenant = await prisma.tenant.update({
+        where: { id },
+        data: { isActive },
+        select: { id: true, name: true, isActive: true },
+    });
+
+    return res.json(tenant);
+}
+
+// ── Impersonate tenant — generates short-lived token ─────────────────────────
+export async function impersonateTenant(req: Request, res: Response): Promise<Response> {
+    const { id } = req.params;
+
+    const tenantUser = await prisma.tenantUser.findFirst({
+        where: { tenantId: id, role: 'owner' },
+        select: { id: true, email: true, tenantId: true },
+    });
+
+    if (!tenantUser) return res.status(404).json({ error: 'Owner do tenant não encontrado' });
+
+    const token = jwt.sign(
+        { tenantId: id, userId: tenantUser.id, impersonatedByAdmin: true },
+        process.env.JWT_ACCESS_SECRET!,
+        { expiresIn: '1h' }
+    );
+
+    return res.json({
+        accessToken: token,
+        expiresIn: 3600,
+        tenant: { id, ownerEmail: tenantUser.email },
+        warning: 'Token de impersonação — expira em 1h. Não compartilhe.',
+    });
+}
+
+// ── Platform-wide metrics ─────────────────────────────────────────────────────
+export async function getAdminMetrics(req: Request, res: Response): Promise<Response> {
+    const [
+        totalTenants,
+        activeSubs,
+        trialSubs,
+        suspendedSubs,
+        cancelledSubs,
+        totalLeads,
+        aiUsageTotal,
+        newThisMonth,
+    ] = await Promise.all([
+        prisma.tenant.count(),
+        prisma.subscription.count({ where: { status: 'ACTIVE' } }),
+        prisma.subscription.count({ where: { status: 'TRIAL' } }),
+        prisma.subscription.count({ where: { status: 'SUSPENDED' } }),
+        prisma.subscription.count({ where: { status: 'CANCELLED' } }),
+        prisma.user.count({ where: { isGroup: false } }),
+        prisma.geminiUsageEvent.aggregate({
+            _sum: { estimatedCostBrl: true, totalTokens: true },
+        }),
+        prisma.tenant.count({
+            where: { createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } },
+        }),
+    ]);
+
+    const activePlans = await prisma.subscription.groupBy({
+        by: ['planName'],
+        where: { status: 'ACTIVE' },
+        _count: { planName: true },
+        _sum: { priceMonthly: true },
+    });
+
+    const mrr = activePlans.reduce((acc, p) => acc + (p._sum.priceMonthly ?? 0), 0);
+
+    return res.json({
+        tenants: { total: totalTenants, newThisMonth },
+        subscriptions: { active: activeSubs, trial: trialSubs, suspended: suspendedSubs, cancelled: cancelledSubs },
+        mrr: mrr.toFixed(2),
+        leads: { total: totalLeads },
+        ai: {
+            totalTokens: aiUsageTotal._sum.totalTokens ?? 0,
+            totalCostBrl: Number(aiUsageTotal._sum.estimatedCostBrl ?? 0).toFixed(2),
+        },
+        planBreakdown: activePlans.map(p => ({
+            plan: p.planName,
+            count: p._count.planName,
+            revenue: (p._sum.priceMonthly ?? 0).toFixed(2),
+        })),
+    });
+}
+
+// ── Tenant billing summary (for tenant-facing view) ──────────────────────────
+export async function getTenantBilling(req: Request, res: Response): Promise<Response> {
+    const tenantId = (req as any).tenantId as string;
+
+    const sub = await prisma.subscription.findUnique({ where: { tenantId } });
+    if (!sub) return res.status(404).json({ error: 'Assinatura não encontrada' });
+
+    return res.json({
+        status: sub.status,
+        planName: sub.planName,
+        priceMonthly: sub.priceMonthly,
+        trialEndsAt: sub.trialEndsAt,
+        currentPeriodEnd: sub.currentPeriodEnd,
+        createdAt: sub.createdAt,
+    });
+}
