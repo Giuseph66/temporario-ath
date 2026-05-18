@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -47,6 +47,15 @@ const BASE_CATEGORIES: NavCategory[] = [
 export function AppLayout() {
     const { logout } = useAuth();
     const { theme, toggle } = useTheme();
+    const navigate = useNavigate();
+    const isImpersonating = !!localStorage.getItem('adminAccessToken');
+
+    function handleBackToAdmin() {
+        // Remove impersonated tenant tokens — admin token still in localStorage
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        navigate('/zeruela/dashboard');
+    }
 
     const { data: integs } = useQuery<{ asaas?: { configured: boolean } }>({
         queryKey: ['integrations'],
@@ -68,21 +77,43 @@ export function AppLayout() {
     });
 
     return (
-        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--paper-2)' }}>
+        <div style={{
+            display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--paper-2)',
+            ...(isImpersonating ? (theme === 'dark' ? {
+                '--accent':      '#c8a96e',
+                '--accent-soft': '#c8a96e18',
+                '--accent-ink':  '#d4b87a',
+            } : {
+                '--accent':      '#9a7520',
+                '--accent-soft': '#c8a96e1a',
+                '--accent-ink':  '#7a5c15',
+            }) as React.CSSProperties : {}),
+        }}>
             {/* Sidebar */}
             <div style={{
-                width: 200, flexShrink: 0, background: 'var(--paper)',
-                borderRight: '1px solid var(--line)', display: 'flex',
-                flexDirection: 'column',
+                width: 200, flexShrink: 0,
+                background: 'var(--paper)',
+                borderRight: `1px solid ${isImpersonating
+                    ? (theme === 'dark' ? '#3a2e18' : '#d4b87a44')
+                    : 'var(--line)'}`,
+                display: 'flex', flexDirection: 'column',
             }}>
                 {/* Brand */}
                 <div style={{
                     padding: '20px 20px 18px',
-                    borderBottom: '1px solid var(--line)',
-                    fontFamily: "'Fraunces', serif", fontSize: 18, color: 'var(--ink-1)',
+                    borderBottom: `1px solid ${isImpersonating
+                        ? (theme === 'dark' ? '#3a2e18' : '#d4b87a44')
+                        : 'var(--line)'}`,
+                    fontFamily: "'Fraunces', serif", fontSize: 18,
+                    color: isImpersonating ? (theme === 'dark' ? '#c8a96e' : '#9a7520') : 'var(--ink-1)',
                     flexShrink: 0,
                 }}>
-                    Agentes Zap
+                    {isImpersonating
+                        ? <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 11, background: '#c8a96e22', color: '#c8a96e', borderRadius: 4, padding: '1px 6px', fontFamily: "'Geist Mono', monospace", letterSpacing: 0.5 }}>ADMIN</span>
+                          </span>
+                        : 'Agentes Zap'
+                    }
                 </div>
 
                 {/* Nav */}
@@ -115,6 +146,7 @@ export function AppLayout() {
                                         textDecoration: 'none',
                                         background: isActive ? 'var(--accent-soft)' : 'transparent',
                                         color: isActive ? 'var(--accent-ink)' : 'var(--ink-3)',
+                                        borderLeft: isActive && isImpersonating ? `2px solid var(--accent)` : '2px solid transparent',
                                         transition: 'background 0.1s, color 0.1s',
                                     })}
                                 >
@@ -128,10 +160,24 @@ export function AppLayout() {
                 {/* Theme + Logout */}
                 <div style={{
                     padding: '12px 16px',
-                    borderTop: '1px solid var(--line)',
+                    borderTop: `1px solid ${isImpersonating ? (theme === 'dark' ? '#3a2e18' : '#d4b87a44') : 'var(--line)'}`,
                     flexShrink: 0,
                     display: 'flex', flexDirection: 'column', gap: 6,
                 }}>
+                    {/* Back to admin button — only when impersonating */}
+                    {isImpersonating && (
+                        <button
+                            onClick={handleBackToAdmin}
+                            style={{
+                                width: '100%', padding: '7px 12px', borderRadius: 8, fontSize: 12,
+                                border: '1px solid #c8a96e55', background: '#c8a96e18',
+                                color: '#c8a96e', cursor: 'pointer', fontFamily: 'inherit',
+                                display: 'flex', alignItems: 'center', gap: 6,
+                            }}
+                        >
+                            <span>◀</span> Voltar ao Admin
+                        </button>
+                    )}
                     {/* Theme toggle */}
                     <button
                         onClick={toggle}

@@ -10,8 +10,11 @@ import { requireSuperAdmin } from './middlewares/superAdmin';
 import { requireActiveSubscription } from './middlewares/subscription';
 import { sseManager } from './services/SSEManager';
 import { adminLogin, adminRefresh, bootstrapAdmin } from './controllers/SuperAdminAuthController';
-import { listTenants, getTenantDetail, patchTenantSubscription, toggleTenantActive, impersonateTenant, getAdminMetrics, getTenantBilling } from './controllers/AdminController';
+import { listTenants, getTenantDetail, patchTenantSubscription, toggleTenantActive, impersonateTenant, getAdminMetrics, getTenantBilling, adminAsaasCreateCustomer, adminAsaasCreateSubscription, adminAsaasListCharges, adminAsaasCreateCharge, adminAsaasDeleteCharge } from './controllers/AdminController';
+import { listCompanies, getCompany, createCompany, updateCompany, deleteCompany, linkTenantToCompany } from './controllers/CompanyController';
+import { listPlans, createPlan, updatePlan, deletePlan, listAdjustments, addAdjustment, removeAdjustment, updateAdjustment, getAdminConfig, upsertAdminConfig, listBillingRuns, triggerBillingRun } from './controllers/PlanController';
 import { checkTrialExpiry } from './services/SubscriptionService';
+import { scheduleBillingCron } from './services/BillingCronService';
 import { createInstance, getQRCode, getStatus, disconnectInstance, configureWebhook, getWebhookStatus, getOwnerPhone } from './controllers/InstanceController';
 import { evolutionWebhook } from './controllers/EvolutionWebhookController';
 import { listLeads, getLead, listConversations, updateLeadState, updateLead, deleteLead, sendMessage, sendMediaMessage, backfillNames, clearSession } from './controllers/LeadsController';
@@ -148,7 +151,40 @@ app.get('/api/zeruela/tenants',                      requireSuperAdmin, listTena
 app.get('/api/zeruela/tenants/:id',                  requireSuperAdmin, getTenantDetail as any);
 app.patch('/api/zeruela/tenants/:id/subscription',   requireSuperAdmin, patchTenantSubscription as any);
 app.patch('/api/zeruela/tenants/:id/active',         requireSuperAdmin, toggleTenantActive as any);
-app.post('/api/zeruela/tenants/:id/impersonate',     requireSuperAdmin, impersonateTenant as any);
+app.post('/api/zeruela/tenants/:id/impersonate',        requireSuperAdmin, impersonateTenant as any);
+app.patch('/api/zeruela/tenants/:id/company',          requireSuperAdmin, linkTenantToCompany as any);
+app.post('/api/zeruela/tenants/:id/asaas/customer',     requireSuperAdmin, adminAsaasCreateCustomer as any);
+app.post('/api/zeruela/tenants/:id/asaas/subscription', requireSuperAdmin, adminAsaasCreateSubscription as any);
+app.get('/api/zeruela/tenants/:id/asaas/charges',          requireSuperAdmin, adminAsaasListCharges as any);
+app.post('/api/zeruela/tenants/:id/asaas/charge',          requireSuperAdmin, adminAsaasCreateCharge as any);
+app.delete('/api/zeruela/asaas/charges/:chargeId',         requireSuperAdmin, adminAsaasDeleteCharge as any);
+
+// Empresas
+app.get('/api/zeruela/companies',       requireSuperAdmin, listCompanies as any);
+app.get('/api/zeruela/companies/:id',   requireSuperAdmin, getCompany as any);
+app.post('/api/zeruela/companies',      requireSuperAdmin, createCompany as any);
+app.patch('/api/zeruela/companies/:id', requireSuperAdmin, updateCompany as any);
+app.delete('/api/zeruela/companies/:id', requireSuperAdmin, deleteCompany as any);
+
+// Planos
+app.get('/api/zeruela/plans',           requireSuperAdmin, listPlans as any);
+app.post('/api/zeruela/plans',          requireSuperAdmin, createPlan as any);
+app.patch('/api/zeruela/plans/:id',     requireSuperAdmin, updatePlan as any);
+app.delete('/api/zeruela/plans/:id',    requireSuperAdmin, deletePlan as any);
+
+// Ajustes de assinatura por cliente
+app.get('/api/zeruela/tenants/:tenantId/adjustments',     requireSuperAdmin, listAdjustments as any);
+app.post('/api/zeruela/tenants/:tenantId/adjustments',    requireSuperAdmin, addAdjustment as any);
+app.delete('/api/zeruela/adjustments/:id',                requireSuperAdmin, removeAdjustment as any);
+app.patch('/api/zeruela/adjustments/:id',                 requireSuperAdmin, updateAdjustment as any);
+
+// Configurações admin (Asaas plataforma)
+app.get('/api/zeruela/config',           requireSuperAdmin, getAdminConfig as any);
+app.patch('/api/zeruela/config',         requireSuperAdmin, upsertAdminConfig as any);
+
+// Billing runs
+app.get('/api/zeruela/billing/runs',     requireSuperAdmin, listBillingRuns as any);
+app.post('/api/zeruela/billing/trigger', requireSuperAdmin, triggerBillingRun as any);
 
 // Tenant billing (tenant-facing, protegida por requireAuth)
 app.get('/api/billing',                        requireAuth as any, getTenantBilling as any);
@@ -312,6 +348,9 @@ const server = app.listen(port, () => {
         checkTrialExpiry().catch(err => console.error('[TrialCron]', err));
     }, 60 * 60 * 1000);
     checkTrialExpiry().catch(() => {}); // run once on boot
+
+    // Billing cron — checks hourly, fires on configured day of month
+    scheduleBillingCron();
 });
 
 async function shutdown(signal: string): Promise<void> {

@@ -133,7 +133,6 @@ function TenantDetailPanel({
     const [impersonating, setImpersonating] = useState(false);
     const [editStatus, setEditStatus] = useState('');
     const [savingStatus, setSavingStatus] = useState(false);
-    const navigate = useNavigate();
 
     useEffect(() => {
         adminAxios().get(`/api/zeruela/tenants/${tenantId}`)
@@ -147,7 +146,7 @@ function TenantDetailPanel({
             const res = await adminAxios().post(`/api/zeruela/tenants/${tenantId}/impersonate`);
             localStorage.setItem('accessToken', res.data.accessToken);
             localStorage.setItem('refreshToken', '');
-            navigate('/dashboard');
+            window.location.href = '/dashboard';
         } catch {
             alert('Falha ao impersonar tenant.');
         } finally {

@@ -21,7 +21,13 @@ import { Automacoes } from './pages/Automacoes';
 import { ConsumoAI } from './pages/ConsumoAI';
 import { Billing } from './pages/Billing';
 import { AdminLogin } from './pages/AdminLogin';
-import { AdminDashboard } from './pages/AdminDashboard';
+import { AdminLayout } from './layouts/AdminLayout';
+import { AdminOverview } from './pages/admin/AdminOverview';
+import { AdminClientes } from './pages/admin/AdminClientes';
+import { AdminEmpresas } from './pages/admin/AdminEmpresas';
+import { AdminAssinaturas } from './pages/admin/AdminAssinaturas';
+import { AdminConfig } from './pages/admin/AdminConfig';
+import { AdminBilling } from './pages/admin/AdminBilling';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
     const { accessToken } = useAuth();
@@ -61,9 +67,16 @@ function App() {
                         <Route path="assinatura"  element={<Billing />} />
                     </Route>
                     {/* Admin routes — completely isolated from tenant app */}
-                    <Route path="/zeruela/login"     element={<AdminLogin />} />
-                    <Route path="/zeruela/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-                    <Route path="/zeruela" element={<Navigate to="/zeruela/dashboard" replace />} />
+                    <Route path="/zeruela/login" element={<AdminLogin />} />
+                    <Route path="/zeruela" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+                        <Route path="dashboard"    element={<AdminOverview />} />
+                        <Route path="clientes"     element={<AdminClientes />} />
+                        <Route path="empresas"     element={<AdminEmpresas />} />
+                        <Route path="assinaturas"  element={<AdminAssinaturas />} />
+                        <Route path="config/asaas" element={<AdminConfig />} />
+                        <Route path="cobrancas"    element={<AdminBilling />} />
+                        <Route index element={<Navigate to="dashboard" replace />} />
+                    </Route>
                     <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>
             </BrowserRouter>

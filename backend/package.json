@@ -11,7 +11,8 @@
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",
         "seed": "ts-node prisma/seed.ts",
-        "seed:prices": "npx ts-node prisma/seeds/geminiPrices.seed.ts"
+        "seed:prices": "npx ts-node prisma/seeds/geminiPrices.seed.ts",
+        "seed:products": "npx ts-node prisma/seeds/products.seed.ts"
     },
     "keywords": [],
     "author": "",

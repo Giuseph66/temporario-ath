@@ -65,3 +65,12 @@
 {"ts":"2026-05-18T02:47:47.730Z","level":"warn","category":"auth","msg":"Login falhou: email não encontrado","data":{"email":"Admin@confluence.com"}}
 {"ts":"2026-05-18T02:47:52.106Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}
 {"ts":"2026-05-18T02:48:51.344Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}
+{"ts":"2026-05-18T03:25:15.982Z","level":"warn","category":"auth","msg":"Login falhou: email não encontrado","data":{"email":"giusephgangareli@gmail.com"}}
+{"ts":"2026-05-18T03:25:19.666Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}
+{"ts":"2026-05-18T03:25:31.063Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}
+{"ts":"2026-05-18T03:25:47.731Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}
+{"ts":"2026-05-18T03:26:52.896Z","level":"warn","category":"auth","msg":"Login falhou: email não encontrado","data":{"email":"giusephgangareli@gmail.com"}}
+{"ts":"2026-05-18T03:26:56.770Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}
+{"ts":"2026-05-18T03:28:35.039Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}
+{"ts":"2026-05-18T03:31:07.141Z","level":"info","category":"auth","msg":"Login bem-sucedido","data":{"email":"admin@confluence.com","tenantId":"c3c84456-2ff4-429e-bcec-e564eb5b1ea9"}}
+{"ts":"2026-05-18T03:31:27.351Z","level":"warn","category":"auth","msg":"Login falhou: email não encontrado","data":{"email":"giusephgangareli@gmail.com"}}

@@ -2,6 +2,80 @@ import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import * as jwt from 'jsonwebtoken';
 import { updateSubscriptionStatus, SubscriptionStatus } from '../services/SubscriptionService';
+import { createAsaasCustomer, createAsaasSubscription, listAsaasCharges, createAsaasCharge, deleteAsaasCharge } from '../services/AsaasAdminService';
+
+export async function adminAsaasCreateCustomer(req: Request, res: Response): Promise<Response> {
+    const { id } = req.params;
+    try {
+        const result = await createAsaasCustomer(id);
+        return res.json(result);
+    } catch (err: any) {
+        const msg: Record<string, string> = {
+            NO_COMPANY_LINKED: 'Nenhuma empresa vinculada a este cliente.',
+            NO_DOCUMENT: 'Empresa sem CPF/CNPJ cadastrado.',
+            ASAAS_NOT_CONFIGURED: 'Asaas não configurado. Configure a API Key em Configurações → Asaas.',
+        };
+        return res.status(400).json({ error: msg[err.message] ?? `Erro Asaas: ${err.response?.data?.errors?.[0]?.description ?? err.message}` });
+    }
+}
+
+export async function adminAsaasCreateCharge(req: Request, res: Response): Promise<Response> {
+    const { id } = req.params;
+    const { billingType, value, dueDate, description } = req.body;
+    if (!billingType || !value || !dueDate) return res.status(400).json({ error: 'billingType, value e dueDate obrigatórios' });
+    try {
+        const data = await createAsaasCharge(id, { billingType, value: Number(value), dueDate, description });
+        return res.json(data);
+    } catch (err: any) {
+        const msg: Record<string, string> = {
+            NO_CUSTOMER_ID: 'Cliente sem Customer ID. Crie o cliente no Asaas primeiro.',
+            INVALID_PRICE: 'Valor deve ser maior que zero.',
+            ASAAS_NOT_CONFIGURED: 'Asaas não configurado.',
+        };
+        return res.status(400).json({ error: msg[err.message] ?? `Erro Asaas: ${err.response?.data?.errors?.[0]?.description ?? err.message}` });
+    }
+}
+
+export async function adminAsaasDeleteCharge(req: Request, res: Response): Promise<Response> {
+    const { chargeId } = req.params;
+    try {
+        await deleteAsaasCharge(chargeId);
+        return res.status(204).send();
+    } catch (err: any) {
+        return res.status(400).json({ error: `Erro Asaas: ${err.response?.data?.errors?.[0]?.description ?? err.message}` });
+    }
+}
+
+export async function adminAsaasListCharges(req: Request, res: Response): Promise<Response> {
+    const { id } = req.params;
+    try {
+        const data = await listAsaasCharges(id);
+        return res.json(data);
+    } catch (err: any) {
+        const msg: Record<string, string> = {
+            NO_ASAAS_IDS: 'Nenhum Customer ID ou Subscription ID cadastrado.',
+            ASAAS_NOT_CONFIGURED: 'Asaas não configurado.',
+        };
+        return res.status(400).json({ error: msg[err.message] ?? `Erro Asaas: ${err.response?.data?.errors?.[0]?.description ?? err.message}` });
+    }
+}
+
+export async function adminAsaasCreateSubscription(req: Request, res: Response): Promise<Response> {
+    const { id } = req.params;
+    const { billingType, nextDueDate } = req.body;
+    if (!billingType || !nextDueDate) return res.status(400).json({ error: 'billingType e nextDueDate obrigatórios' });
+    try {
+        const result = await createAsaasSubscription(id, { billingType, nextDueDate });
+        return res.json(result);
+    } catch (err: any) {
+        const msg: Record<string, string> = {
+            NO_CUSTOMER_ID: 'Crie o cliente no Asaas primeiro.',
+            INVALID_PRICE: 'Defina um valor de assinatura maior que zero.',
+            ASAAS_NOT_CONFIGURED: 'Asaas não configurado.',
+        };
+        return res.status(400).json({ error: msg[err.message] ?? `Erro Asaas: ${err.response?.data?.errors?.[0]?.description ?? err.message}` });
+    }
+}
 
 // ── List all tenants with subscription + metrics ──────────────────────────────
 export async function listTenants(req: Request, res: Response): Promise<Response> {
@@ -10,8 +84,9 @@ export async function listTenants(req: Request, res: Response): Promise<Response
         select: {
             id: true, name: true, slug: true, plan: true, isActive: true, createdAt: true,
             subscription: {
-                select: { status: true, planName: true, priceMonthly: true, trialEndsAt: true, currentPeriodEnd: true, asaasCustomerId: true },
+                select: { status: true, planId: true, planName: true, priceMonthly: true, trialEndsAt: true, currentPeriodEnd: true, asaasCustomerId: true, asaasSubscriptionId: true },
             },
+            company: { select: { id: true, name: true } },
             tenantUsers: { select: { email: true, role: true, lastLoginAt: true }, orderBy: { createdAt: 'asc' }, take: 1 },
             _count: { select: { users: true, agents: true } },
         },
@@ -67,10 +142,16 @@ export async function getTenantDetail(req: Request, res: Response): Promise<Resp
 // ── Update tenant subscription ────────────────────────────────────────────────
 export async function patchTenantSubscription(req: Request, res: Response): Promise<Response> {
     const { id } = req.params;
-    const { status, planName, priceMonthly, trialEndsAt, currentPeriodEnd, asaasCustomerId, asaasSubscriptionId } = req.body;
+    const { status, planId, planName, priceMonthly, trialEndsAt, currentPeriodEnd, asaasCustomerId, asaasSubscriptionId } = req.body;
 
     const tenant = await prisma.tenant.findUnique({ where: { id }, select: { id: true } });
-    if (!tenant) return res.status(404).json({ error: 'Tenant não encontrado' });
+    if (!tenant) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+    // Ensure subscription exists
+    const existingSub = await prisma.subscription.findUnique({ where: { tenantId: id } });
+    if (!existingSub) {
+        await prisma.subscription.create({ data: { tenantId: id, status: status ?? 'TRIAL', planId: planId || null, planName: planName ?? 'starter', priceMonthly: priceMonthly ? Number(priceMonthly) : 0 } });
+    }
 
     if (status) {
         await updateSubscriptionStatus(id, status as SubscriptionStatus, {
@@ -80,15 +161,17 @@ export async function patchTenantSubscription(req: Request, res: Response): Prom
         });
     }
 
-    if (planName !== undefined || priceMonthly !== undefined || trialEndsAt !== undefined) {
-        await prisma.subscription.update({
-            where: { tenantId: id },
-            data: {
-                ...(planName !== undefined ? { planName } : {}),
-                ...(priceMonthly !== undefined ? { priceMonthly: Number(priceMonthly) } : {}),
-                ...(trialEndsAt !== undefined ? { trialEndsAt: new Date(trialEndsAt) } : {}),
-            },
-        });
+    const updateData: Record<string, any> = {};
+    if (planId !== undefined) updateData.planId = planId || null;
+    if (planName !== undefined) updateData.planName = planName;
+    if (priceMonthly !== undefined) updateData.priceMonthly = Number(priceMonthly);
+    if (trialEndsAt !== undefined) updateData.trialEndsAt = trialEndsAt ? new Date(trialEndsAt) : null;
+    if (currentPeriodEnd !== undefined && !status) updateData.currentPeriodEnd = currentPeriodEnd ? new Date(currentPeriodEnd) : null;
+    if (asaasCustomerId !== undefined) updateData.asaasCustomerId = asaasCustomerId || null;
+    if (asaasSubscriptionId !== undefined) updateData.asaasSubscriptionId = asaasSubscriptionId || null;
+
+    if (Object.keys(updateData).length > 0) {
+        await prisma.subscription.update({ where: { tenantId: id }, data: updateData });
     }
 
     const updated = await prisma.subscription.findUnique({ where: { tenantId: id } });

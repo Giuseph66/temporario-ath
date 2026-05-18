@@ -9,11 +9,93 @@ datasource db {
 
 // ─── Multi-tenant SaaS — Sprint A ─────────────────────────────────────────────
 
+model BillingRun {
+  id             String   @id @default(uuid())
+  tenantId       String
+  month          String   // "2026-05"
+  value          Float
+  dueDate        DateTime
+  asaasChargeId  String?
+  invoiceUrl     String?
+  bankSlipUrl    String?
+  status         String   @default("PENDING") // PENDING | PAID | FAILED | CANCELLED
+  whatsappSent   Boolean  @default(false)
+  emailSent      Boolean  @default(false)
+  error          String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, month])
+  @@index([status])
+}
+
+model Company {
+  id         String   @id @default(uuid())
+  name       String
+  personType String   @default("PJ") // PF | PJ
+  document   String?  @unique         // CPF (PF) ou CNPJ (PJ)
+  email      String?
+  phone      String?
+  address    String?
+  city       String?
+  state      String?
+  zipCode    String?
+  website    String?
+  notes      String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenants    Tenant[]
+}
+
+model Plan {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?  @db.Text
+  basePrice    Float    @default(0)
+  billingCycle String   @default("monthly") // monthly | quarterly | yearly
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+model AdminConfig {
+  id                      String   @id @default("main")
+  // Asaas
+  asaasApiKey             String?
+  asaasBaseUrl            String   @default("https://sandbox.asaas.com/api/v3")
+  asaasWebhookSecret      String?
+  // SMTP
+  smtpHost                String?
+  smtpPort                Int?
+  smtpSecure              Boolean  @default(false)
+  smtpUser                String?
+  smtpPass                String?
+  smtpFromName            String?
+  smtpFromEmail           String?
+  smtpReplyTo             String?
+  // Billing cron
+  billingEnabled          Boolean  @default(false)
+  billingDayOfMonth       Int      @default(1)   // 1–28: day of month to run
+  billingDueDaysAhead     Int      @default(5)   // days until charge due date
+  billingBillingType      String   @default("PIX") // BOLETO | PIX | CREDIT_CARD
+  billingWhatsappTemplate String?  @db.Text       // {name}, {value}, {dueDate}, {link}
+  billingEvolutionInstance String?
+  billingEvolutionApiKey  String?
+  billingEvolutionBaseUrl String?
+  updatedAt               DateTime @updatedAt
+}
+
 model Tenant {
   id                String       @id @default(uuid())
   name              String
   slug              String       @unique
   plan              String       @default("free")
+  companyId         String?
   evolutionInstance String?
   evolutionApiKey   String?
   evolutionBaseUrl  String?
@@ -28,10 +110,12 @@ model Tenant {
   isActive          Boolean      @default(true)
   createdAt         DateTime     @default(now())
 
+  company           Company?     @relation(fields: [companyId], references: [id])
   users             User[]
   agents            Agent[]
   tenantUsers       TenantUser[]
   subscription      Subscription?
+  billingRuns       BillingRun[]
   googleCalendarIntegrations UserGoogleCalendarIntegration[]
   knowledgeDocs       KnowledgeDocument[]
   contacts            Contact[]
@@ -41,6 +125,7 @@ model Tenant {
   geminiUsageEvents   GeminiUsageEvent[]
   geminiUsageBudget   GeminiUsageBudget?
   geminiModelCatalog  GeminiModelCatalog[]
+  emailTemplateLinks  AdminEmailTemplateTenant[]
 }
 
 model SuperAdmin {
@@ -51,9 +136,50 @@ model SuperAdmin {
   lastLoginAt  DateTime?
 }
 
+model AdminEmailTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  subject     String
+  htmlBody    String   @db.Text
+  textBody    String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenantLinks AdminEmailTemplateTenant[]
+
+  @@index([isActive])
+}
+
+model AdminEmailTemplateTenant {
+  id         String   @id @default(uuid())
+  templateId String
+  tenantId   String
+  createdAt  DateTime @default(now())
+
+  template   AdminEmailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, tenantId])
+  @@index([templateId])
+  @@index([tenantId])
+}
+
+model SubscriptionAdjustment {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  type           String       // discount | increment
+  value          Float
+  description    String       @db.Text
+  createdAt      DateTime     @default(now())
+
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+}
+
 model Subscription {
   id                  String    @id @default(uuid())
   tenantId            String    @unique
+  planId              String?
   status              String    @default("TRIAL") // TRIAL | ACTIVE | OVERDUE | SUSPENDED | CANCELLED
   planName            String    @default("starter")
   priceMonthly        Float     @default(0)
@@ -67,6 +193,8 @@ model Subscription {
   updatedAt           DateTime  @updatedAt
 
   tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan                Plan?     @relation(fields: [planId], references: [id])
+  adjustments         SubscriptionAdjustment[]
 }
 
 model TenantUser {
